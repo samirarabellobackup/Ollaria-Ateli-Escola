@@ -1,0 +1,6 @@
+{
+  "name": "Ollaria Ateliê - Gestão & Portal do Aluno",
+  "description": "Sistema de gestão do ateliê Ollaria Cerâmica: portal exclusivo do aluno com senha individual, controle de presença e aulas, monitoramento de queima de peças e prazo de 90 dias, pagamentos de mensalidades e materiais, notificações automáticas e relatórios mensais administrativos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
