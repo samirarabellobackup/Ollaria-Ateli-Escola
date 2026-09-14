@@ -10,7 +10,8 @@ import {
   Mail,
   Calendar,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck
 } from 'lucide-react';
 
 interface AddStudentModalProps {
@@ -64,14 +65,14 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       menor18: 'Não',
       contatoEmergenciaNome: '',
       contatoEmergenciaRelacao: '',
-      informacoesSaudeAtendimento: 'Cadastrado diretamente pela coordenação do ateliê.',
-      aceitouRegrasCondicoes: true,
-      dataAceiteRegrasCondicoes: new Date().toISOString(),
-      aceitouTermoRegulamento: true,
-      dataAceiteTermoRegulamento: new Date().toISOString(),
-      cienciaProcessoCeramico: true,
-      cienciaMateriaisQueimas: true,
-      veracidadeInformacoes: true,
+      informacoesSaudeAtendimento: 'Cadastrado pela coordenação do ateliê.',
+      aceitouRegrasCondicoes: false,
+      dataAceiteRegrasCondicoes: '',
+      aceitouTermoRegulamento: false,
+      dataAceiteTermoRegulamento: '',
+      cienciaProcessoCeramico: false,
+      cienciaMateriaisQueimas: false,
+      veracidadeInformacoes: false,
       autorizacaoImagem: 'autorizo',
       formaPagamentoPretendida
     };
@@ -82,7 +83,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   const handleCopyAccess = () => {
     if (!createdStudent) return;
-    const msg = `Olá, ${createdStudent.registrationData.nomePreferencia || createdStudent.nome}! Seja muito bem-vinda(o) à Ollaria Ateliê de Cerâmica.\n\nSeu acesso ao Portal do Aluno está pronto:\n🔑 Código de Acesso: ${createdStudent.accessCode}\n🔒 PIN / Senha: ${createdStudent.pin}\nTurma: ${createdStudent.turma}\n\nAcesse o sistema da Ollaria para acompanhar suas peças, queimas, presenças e financeiro!`;
+    const msg = `Olá, ${createdStudent.registrationData.nomePreferencia || createdStudent.nome}! Seja muito bem-vinda(o) à Ollaria Ateliê de Cerâmica.\n\nSeu acesso ao Portal do Aluno está pronto:\n🔑 Código de Acesso: ${createdStudent.accessCode}\n🔒 PIN / Senha: ${createdStudent.pin}\nTurma: ${createdStudent.turma}\n\n📌 *Importante:* No seu primeiro acesso ao aplicativo, você visualizará as Regras e o Regulamento do Ateliê para sua leitura e aceite direto.\n\nAcesse o sistema da Ollaria para acompanhar suas peças, queimas, presenças e financeiro!`;
     navigator.clipboard.writeText(msg);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2500);
@@ -332,6 +333,17 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Notice about terms acceptance */}
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-semibold">Aceite das Regras & Regulamento:</strong>
+                <span>
+                  O aceite dos termos e condições é pessoal e obrigatório: ele será solicitado diretamente à(ao) aluna(o) ao acessar o aplicativo pela primeira vez, ficando bloqueado contra edição após assinado.
+                </span>
+              </div>
             </div>
 
             {/* Link to full registration wizard */}

@@ -61,6 +61,7 @@ interface StudioContextType {
   deleteTransaction: (txId: string) => void;
 
   // Registration & Changes
+  acceptStudentTerms: (studentId: string, autorizacaoImagem?: 'autorizo' | 'nao_autorizo') => void;
   requestProfileChange: (studentId: string, campo: string, valorAnterior: string, novoValor: string, motivo?: string) => void;
   resolveProfileChange: (requestId: string, status: 'aprovado' | 'rejeitado') => void;
 
@@ -478,6 +479,43 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTransactions((prev) => prev.filter((t) => t.id !== txId));
   };
 
+  const acceptStudentTerms = (studentId: string, autorizacaoImagem: 'autorizo' | 'nao_autorizo' = 'autorizo') => {
+    const timestamp = new Date().toISOString();
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id !== studentId) return s;
+        // Do not overwrite if already accepted - strictly immutable
+        if (s.registrationData.aceitouTermoRegulamento && s.registrationData.dataAceiteTermoRegulamento) {
+          return s;
+        }
+        return {
+          ...s,
+          registrationData: {
+            ...s.registrationData,
+            aceitouRegrasCondicoes: true,
+            dataAceiteRegrasCondicoes: timestamp,
+            aceitouTermoRegulamento: true,
+            dataAceiteTermoRegulamento: timestamp,
+            cienciaProcessoCeramico: true,
+            cienciaMateriaisQueimas: true,
+            veracidadeInformacoes: true,
+            autorizacaoImagem: autorizacaoImagem || s.registrationData.autorizacaoImagem || 'autorizo'
+          }
+        };
+      })
+    );
+
+    // Create persistent confirmation notification for student
+    const student = students.find((s) => s.id === studentId);
+    createNotification(
+      studentId,
+      'comunicado',
+      'Termos e Regulamento Aceitos com Sucesso',
+      `Olá ${student?.nome || 'aluno(a)'}! Você formalizou e assinou digitalmente o Regulamento Oficial da Ollaria Ateliê em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Uma via autenticada está permanentemente registrada na sua Ficha de Matrícula.`,
+      'baixa'
+    );
+  };
+
   const requestProfileChange = (
     studentId: string,
     campo: string,
@@ -732,6 +770,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addTransaction,
         markTransactionAsPaid,
         deleteTransaction,
+        acceptStudentTerms,
         requestProfileChange,
         resolveProfileChange,
         createNotification,

@@ -21,9 +21,12 @@ import {
   MapPin,
   ExternalLink,
   ChevronRight,
-  Plus
+  Plus,
+  Lock,
+  FileText
 } from 'lucide-react';
 import { PieceStage } from '../../types';
+import { StudentTermsModal } from '../terms/StudentTermsModal';
 
 export const StudentPortal: React.FC = () => {
   const {
@@ -33,6 +36,7 @@ export const StudentPortal: React.FC = () => {
     transactions,
     notifications,
     changeRequests,
+    acceptStudentTerms,
     requestProfileChange,
     markNotificationAsRead
   } = useStudio();
@@ -40,6 +44,10 @@ export const StudentPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pecas' | 'aulas' | 'financeiro' | 'matricula' | 'notificacoes'>('pecas');
   const [copiedPix, setCopiedPix] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Terms modal state
+  const [isViewTermsOpen, setIsViewTermsOpen] = useState(false);
+  const [forceAcceptTermsOpen, setForceAcceptTermsOpen] = useState(false);
 
   // Edit request modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -122,8 +130,40 @@ export const StudentPortal: React.FC = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  const hasAcceptedTerms = Boolean(
+    currentStudent.registrationData?.aceitouTermoRegulamento &&
+    currentStudent.registrationData?.dataAceiteTermoRegulamento
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+      {/* Mandatory Terms Banner if student hasn't accepted yet */}
+      {!hasAcceptedTerms && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-200">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-2xl bg-amber-100 text-amber-800 shrink-0 mt-0.5 shadow-xs">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-base sm:text-lg text-amber-950">
+                Ação Obrigatória: Aceite das Regras & Regulamento do Ateliê
+              </h3>
+              <p className="text-xs sm:text-sm text-amber-900 mt-1 leading-relaxed max-w-3xl">
+                Para sua segurança e conformidade, é necessário ler e aceitar formalmente o Regulamento Oficial da Ollaria Ateliê. <strong>O aceite deve ser realizado pessoalmente por você</strong> ao acessar o aplicativo e não pode ser feito pela coordenação. Após a confirmação, o documento fica registrado com data e hora e não poderá ser editado.
+              </p>
+            </div>
+          </div>
+          <button
+            id="btn-open-accept-terms-top-banner"
+            onClick={() => setForceAcceptTermsOpen(true)}
+            className="px-5 py-3 rounded-xl bg-[#2C241E] text-white text-xs sm:text-sm font-bold hover:bg-[#43372E] transition-all shadow-sm flex items-center gap-2 shrink-0 whitespace-nowrap"
+          >
+            <ShieldCheck className="w-4 h-4 text-[#E6A15C]" />
+            <span>Ler e Aceitar Termos</span>
+          </button>
+        </div>
+      )}
       
       {/* Student Welcome & Top Overview Card */}
       <div className="bg-white rounded-3xl border border-[#E6DFD5] p-6 sm:p-8 shadow-xs relative overflow-hidden">
@@ -272,7 +312,7 @@ export const StudentPortal: React.FC = () => {
           { id: 'pecas', label: 'Minhas Peças Cerâmicas', icon: Flame, badge: myPieces.length },
           { id: 'aulas', label: 'Presença & Aulas', icon: Calendar, badge: `${currentStudent.aulasFeitas}/${currentStudent.aulasTotaisPlano}` },
           { id: 'financeiro', label: 'Financeiro & Pagamentos', icon: CreditCard, badge: pendingAmount > 0 ? `R$ ${pendingAmount.toFixed(0)}` : undefined },
-          { id: 'matricula', label: 'Ficha de Matrícula & Termos', icon: FileCheck },
+          { id: 'matricula', label: 'Ficha de Matrícula & Termos', icon: FileCheck, badge: !hasAcceptedTerms ? 'Pendente' : undefined },
           { id: 'notificacoes', label: 'Avisos & Lembretes', icon: Bell, badge: myNotifications.filter((n) => !n.lida).length || undefined }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -838,63 +878,129 @@ export const StudentPortal: React.FC = () => {
 
           </div>
 
-          {/* Signed Terms & Immutable Consents */}
-          <div className="bg-white p-6 rounded-2xl border border-[#E6DFD5] space-y-4">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-600" />
-              <h4 className="font-serif font-bold text-base text-[#2C241E]">
-                Termos Assinados & Declarações Jurídicas (Imutáveis)
-              </h4>
+          {/* Terms & Regulations Section */}
+          {!hasAcceptedTerms ? (
+            <div className="bg-amber-50/80 p-6 rounded-2xl border-2 border-dashed border-amber-300 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-bold text-base text-amber-950">
+                      Regras & Regulamento do Ateliê: Aceite Pendente
+                    </h4>
+                    <p className="text-xs text-amber-900 mt-1 max-w-xl leading-relaxed">
+                      Conforme o regulamento da Ollaria Ateliê, as regras e condições de funcionamento devem ser lidas e aceitas diretamente por você para a confirmação plena da matrícula. A coordenação não assina em seu nome.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setForceAcceptTermsOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-[#D97736] text-white text-xs font-bold hover:bg-[#C26224] transition-colors shadow-xs flex items-center gap-2 shrink-0 self-start sm:self-center"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Ler e Aceitar Agora</span>
+                </button>
+              </div>
             </div>
+          ) : (
+            <div className="bg-white p-6 rounded-2xl border border-[#E6DFD5] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#EBE4DA] pb-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif font-bold text-base text-[#2C241E]">
+                      Termos Assinados & Declarações Jurídicas (Documento Imutável)
+                    </h4>
+                    <p className="text-xs text-emerald-800 font-medium mt-0.5">
+                      Assinado digitalmente por você em{' '}
+                      <strong>
+                        {new Date(currentStudent.registrationData.dataAceiteTermoRegulamento).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </strong>{' '}
+                      • Bloqueado para edição
+                    </p>
+                  </div>
+                </div>
 
-            <p className="text-xs text-[#6B5A4D]">
-              Conforme as diretrizes da Ollaria Ateliê, os aceites abaixo foram formalizados e autenticados no ato da matrícula:
-            </p>
+                <button
+                  type="button"
+                  onClick={() => setIsViewTermsOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-[#FAF8F5] border border-[#D5CBC0] text-xs font-semibold text-[#2C241E] hover:bg-[#EBE4DA] flex items-center gap-1.5 transition-colors self-start sm:self-center shadow-2xs"
+                >
+                  <FileText className="w-4 h-4 text-[#D97736]" />
+                  <span>Visualizar Regulamento Completo</span>
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              
-              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-[#2C241E]">Regras e Condições de Matrícula</strong>
-                  <span className="text-[#7A6A5E] text-[11px]">Assinado em {new Date(currentStudent.registrationData.dataAceiteRegrasCondicoes || currentStudent.dataMatricula).toLocaleDateString('pt-BR')}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-[#2C241E]">Regras e Condições de Matrícula</strong>
+                    <span className="text-[#7A6A5E] text-[11px]">
+                      Aceito diretamente em {new Date(currentStudent.registrationData.dataAceiteRegrasCondicoes || currentStudent.registrationData.dataAceiteTermoRegulamento || currentStudent.dataMatricula).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-[#2C241E]">Termo de Matrícula e Regulamento Oficial</strong>
+                    <span className="text-[#7A6A5E] text-[11px]">
+                      Aceito diretamente em {new Date(currentStudent.registrationData.dataAceiteTermoRegulamento || currentStudent.dataMatricula).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-[#2C241E]">Ciência do Processo Cerâmico</strong>
+                    <span className="text-[#7A6A5E] text-[11px]">Ciente das variáveis artesanais, secagem e queimas</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-[#2C241E]">Ciência sobre Materiais e Queimas</strong>
+                    <span className="text-[#7A6A5E] text-[11px]">Cobrança separada de argilas, esmaltes e fornos</span>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5 sm:col-span-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block text-[#2C241E]">
+                      Autorização de Uso de Imagem: {currentStudent.registrationData.autorizacaoImagem === 'autorizo' ? 'Autorizado' : 'Não Autorizado'}
+                    </strong>
+                    <span className="text-[#7A6A5E] text-[11px]">
+                      Divulgação institucional dos processos e peças nas mídias sociais do Ateliê Sah Pereira | Ollaria
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-[#2C241E]">Termo de Matrícula e Regulamento</strong>
-                  <span className="text-[#7A6A5E] text-[11px]">Assinado em {new Date(currentStudent.registrationData.dataAceiteTermoRegulamento || currentStudent.dataMatricula).toLocaleDateString('pt-BR')}</span>
-                </div>
+              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-center gap-2.5 text-[11px] text-[#7A6A5E]">
+                <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>Registro Imutável:</strong> Por segurança jurídica e transparência, os termos aceitos não podem ser alterados ou revogados no aplicativo.
+                </span>
               </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-[#2C241E]">Ciência do Processo Cerâmico</strong>
-                  <span className="text-[#7A6A5E] text-[11px]">Ciente das variáveis artesanais e queimas</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-[#2C241E]">Ciência sobre Materiais e Queimas</strong>
-                  <span className="text-[#7A6A5E] text-[11px]">Cobrança separada de argilas e fornos</span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-start gap-2.5 sm:col-span-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-[#2C241E]">Autorização de Uso de Imagem: {currentStudent.registrationData.autorizacaoImagem === 'autorizo' ? 'Autorizado' : 'Não Autorizado'}</strong>
-                  <span className="text-[#7A6A5E] text-[11px]">Divulgação institucional do Ateliê Sah Pereira | Ollaria Cerâmica</span>
-                </div>
-              </div>
-
             </div>
-          </div>
+          )}
 
         </div>
       )}
@@ -1051,6 +1157,31 @@ export const StudentPortal: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Mandatory Acceptance Terms Modal when terms not accepted yet */}
+      <StudentTermsModal
+        isOpen={!hasAcceptedTerms || forceAcceptTermsOpen}
+        student={currentStudent}
+        mode={hasAcceptedTerms ? 'view' : 'accept'}
+        onClose={() => {
+          setForceAcceptTermsOpen(false);
+          setIsViewTermsOpen(false);
+        }}
+        onAccept={(autorizacaoImagem) => {
+          acceptStudentTerms(currentStudent.id, autorizacaoImagem);
+          setForceAcceptTermsOpen(false);
+        }}
+      />
+
+      {/* Consultation Modal when student wants to re-read the authenticated terms */}
+      {hasAcceptedTerms && isViewTermsOpen && (
+        <StudentTermsModal
+          isOpen={isViewTermsOpen}
+          student={currentStudent}
+          mode="view"
+          onClose={() => setIsViewTermsOpen(false)}
+        />
       )}
 
     </div>

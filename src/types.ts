@@ -141,7 +141,7 @@ export interface FinancialTransaction {
 export interface SystemNotification {
   id: string;
   studentId?: string; // se nulo, é global do ateliê
-  tipo: 'cobranca' | 'renovacao' | 'retirada_peca' | 'aviso_aula' | 'aprovacao_pendente';
+  tipo: 'cobranca' | 'renovacao' | 'retirada_peca' | 'aviso_aula' | 'aprovacao_pendente' | 'comunicado';
   titulo: string;
   mensagem: string;
   urgencia: 'baixa' | 'media' | 'alta';
