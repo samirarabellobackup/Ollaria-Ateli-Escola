@@ -823,7 +823,11 @@ export const StudentPortal: React.FC = () => {
                 </div>
                 <div className="pt-2 border-t border-[#EBE4DA]">
                   <span className="text-[#7A6A5E] block">Contato de Emergência:</span>
-                  <strong className="text-[#2C241E]">{currentStudent.registrationData.contatoEmergenciaNome} ({currentStudent.registrationData.contatoEmergenciaRelacao})</strong>
+                  <strong className="text-[#2C241E]">
+                    {currentStudent.registrationData.contatoEmergenciaNome
+                      ? `${currentStudent.registrationData.contatoEmergenciaNome} ${currentStudent.registrationData.contatoEmergenciaRelacao ? `(${currentStudent.registrationData.contatoEmergenciaRelacao})` : ''}`
+                      : 'Não informado'}
+                  </strong>
                 </div>
                 <div>
                   <span className="text-[#7A6A5E] block">Informações de Saúde / Atendimento:</span>

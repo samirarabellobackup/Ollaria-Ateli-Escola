@@ -185,7 +185,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const loginAsAdmin = (password: string) => {
-    if (password === 'admin' || password === 'ollaria') {
+    if (password.trim() === 'ollariagestao') {
       setRole('admin');
       return { success: true };
     }

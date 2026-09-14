@@ -83,12 +83,8 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
         return false;
       }
     } else if (currentStep === 3) {
-      if (!formData.contatoEmergenciaNome || !formData.contatoEmergenciaRelacao) {
-        setValidationError('Por favor, informe quem devemos contatar em caso de emergência e o grau de relação.');
-        return false;
-      }
-      if (formData.menor18 === 'Sim' && (!formData.responsavelNome || !formData.responsavelCpf || !formData.responsavelWhatsapp)) {
-        setValidationError('Para alunos menores de idade, os dados do responsável legal são obrigatórios.');
+      if (!formData.menor18) {
+        setValidationError('Por favor, selecione se o(a) aluno(a) é menor de 18 anos.');
         return false;
       }
     } else if (currentStep === 4) {
@@ -622,7 +618,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                       <p className="text-xs font-bold text-[#9E4C1D]">Dados do Responsável Legal:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">Nome completo do responsável *</label>
+                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">Nome completo do responsável</label>
                           <input
                             type="text"
                             value={formData.responsavelNome || ''}
@@ -631,7 +627,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">CPF do responsável *</label>
+                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">CPF do responsável</label>
                           <input
                             type="text"
                             value={formData.responsavelCpf || ''}
@@ -640,7 +636,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">WhatsApp / telefone do responsável *</label>
+                          <label className="block text-[11px] font-bold text-[#4A3E35] mb-0.5">WhatsApp / telefone do responsável</label>
                           <input
                             type="tel"
                             value={formData.responsavelWhatsapp || ''}
@@ -674,7 +670,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-[#4A3E35] mb-1">
-                        Em caso de emergência, quem devemos contatar? *
+                        Em caso de emergência, quem devemos contatar? <span className="font-normal text-[#7A6A5E] text-[11px]">(opcional)</span>
                       </label>
                       <input
                         type="text"
@@ -682,13 +678,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                         value={formData.contatoEmergenciaNome}
                         onChange={(e) => handleChange('contatoEmergenciaNome', e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs"
-                        required
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-[#4A3E35] mb-1">
-                        Qual a relação dessa pessoa com você? *
+                        Qual a relação dessa pessoa com você? <span className="font-normal text-[#7A6A5E] text-[11px]">(opcional)</span>
                       </label>
                       <input
                         type="text"
@@ -696,14 +691,13 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                         value={formData.contatoEmergenciaRelacao}
                         onChange={(e) => handleChange('contatoEmergenciaRelacao', e.target.value)}
                         className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs"
-                        required
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-[#4A3E35] mb-1">
-                      Existe alguma informação importante que você gostaria de nos comunicar para que possamos oferecer um atendimento adequado durante as atividades? *
+                      Existe alguma informação importante que você gostaria de nos comunicar para que possamos oferecer um atendimento adequado durante as atividades? <span className="font-normal text-[#7A6A5E] text-[11px]">(opcional)</span>
                     </label>
                     <textarea
                       rows={2}
