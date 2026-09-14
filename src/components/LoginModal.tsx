@@ -119,43 +119,76 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           {activeTab === 'student' ? (
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  Código de Acesso do Aluno
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  E-mail de Cadastro no Aplicativo
                 </label>
                 <input
                   type="text"
-                  placeholder="Informe o código fornecido pelo ateliê"
+                  placeholder="ex: seu.email@exemplo.com ou OL-4921"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 uppercase"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 font-medium"
                   required
                 />
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  O mesmo e-mail informado na sua matrícula.
+                </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  PIN / Senha de Acesso
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  Senha Gerada pelo Ateliê (PIN)
                 </label>
                 <input
                   type="password"
-                  placeholder="PIN numérico de acesso"
+                  placeholder="Digite sua senha gerada pelo app"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 font-medium tracking-wide"
                   required
                 />
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  Senha numérica gerada exclusivamente para seu acesso.
+                </p>
               </div>
 
               <button
                 type="submit"
                 className="w-full py-2.5 rounded-xl bg-[#D97736] text-white font-semibold text-sm hover:bg-[#C26224] transition-colors shadow-xs"
               >
-                Acessar Minha Página
+                Acessar Minha Área de Aluno(a)
               </button>
 
-              <div className="mt-4 pt-4 border-t border-[#E6DFD5] text-center">
+              {/* Demo quick-fill buttons */}
+              <div className="pt-2 text-center">
+                <p className="text-[11px] text-[#8C7A6E] mb-1.5">Acessos de demonstração:</p>
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIdentifier('beatriz@email.com');
+                      setPin('4921');
+                    }}
+                    className="text-[10px] px-2 py-1 rounded bg-[#FAF0E6] text-[#D97736] hover:bg-[#F3DEC9] font-medium border border-[#EAC9B0]"
+                  >
+                    Aluno Teste: beatriz@email.com (4921)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('admin');
+                      setAdminPassword('ollariagestao');
+                    }}
+                    className="text-[10px] px-2 py-1 rounded bg-[#FAF8F5] text-[#4A3E35] hover:bg-[#EBE4DA] font-medium border border-[#D5CBC0]"
+                  >
+                    Coordenação: ollariagestao
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-[#E6DFD5] text-center">
                 <p className="text-[11px] text-[#7A6A5E] leading-relaxed">
-                  O acesso é individual e restrito. Sua chave e senha de acesso são geradas e repassadas exclusivamente pela coordenação do ateliê.
+                  O acesso é individual e protegido. A senha e o código são gerados e repassados exclusivamente pela coordenação do ateliê.
                 </p>
               </div>
             </form>

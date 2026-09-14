@@ -120,14 +120,14 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
               <div className="bg-[#FAF8F5] border border-[#EBE4DA] rounded-xl p-3 text-xs text-[#6B5A4D] flex items-start gap-2.5">
                 <Lock className="w-4 h-4 text-[#D97736] shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
-                  O acesso às suas peças, presenças e financeiro é estritamente pessoal. O código e o PIN são gerados pelo sistema e repassados a você diretamente pela coordenação do ateliê.
+                  Para sua segurança, o acesso ao seu portal de peças, chamadas e pagamentos é estritamente pessoal. Utilize o <strong>e-mail informado na sua matrícula</strong> e a <strong>senha gerada pelo aplicativo</strong> e enviada a você pelo ateliê.
                 </p>
               </div>
 
               {studentError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{studentError}</span>
+                <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">{studentError}</div>
                 </div>
               )}
 
@@ -139,8 +139,8 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  Código de Acesso do Aluno
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  E-mail de Cadastro no Aplicativo
                 </label>
                 <div className="relative">
                   <input
@@ -148,17 +148,20 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                     type="text"
                     value={studentCode}
                     onChange={(e) => setStudentCode(e.target.value)}
-                    placeholder="Informe o código fornecido pelo ateliê"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 uppercase font-medium"
+                    placeholder="ex: seu.email@exemplo.com ou OL-4921"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 font-medium"
                     required
                   />
                   <KeyRound className="w-4 h-4 text-[#A69588] absolute right-3 top-3 pointer-events-none" />
                 </div>
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  Digite o e-mail cadastrado (ou seu código OL-XXXX / CPF).
+                </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  PIN / Senha de Acesso
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  Senha de Acesso Gerada pelo Ateliê
                 </label>
                 <div className="relative">
                   <input
@@ -166,12 +169,15 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                     type="password"
                     value={studentPin}
                     onChange={(e) => setStudentPin(e.target.value)}
-                    placeholder="PIN numérico fornecido pelo ateliê"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 font-medium"
+                    placeholder="Digite a senha / PIN gerado pelo aplicativo"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 font-medium tracking-wide"
                     required
                   />
                   <Lock className="w-4 h-4 text-[#A69588] absolute right-3 top-3 pointer-events-none" />
                 </div>
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  Senha de acesso individual enviada pela coordenação do ateliê.
+                </p>
               </div>
 
               <button
@@ -179,8 +185,37 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 type="submit"
                 className="w-full py-3 rounded-xl bg-[#D97736] text-white font-semibold text-sm hover:bg-[#C26224] transition-all shadow-md active:scale-99"
               >
-                Acessar Minha Página de Aluno(a)
+                Acessar Minha Área de Aluno(a)
               </button>
+
+              {/* Quick sample credentials helper for preview/testing */}
+              <div className="pt-2 border-t border-[#EBE4DA] text-center">
+                <p className="text-[11px] text-[#8C7A6E] mb-2 font-medium">
+                  Para testes rápidos de demonstração:
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStudentCode('beatriz@email.com');
+                      setStudentPin('4921');
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#FAF0E6] text-[#D97736] hover:bg-[#F3DEC9] font-medium border border-[#EAC9B0] transition-colors"
+                  >
+                    Aluno Teste: beatriz@email.com (Senha: 4921)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('admin');
+                      setAdminPassword('ollariagestao');
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#FAF8F5] text-[#4A3E35] hover:bg-[#EBE4DA] font-medium border border-[#D5CBC0] transition-colors"
+                  >
+                    Coordenação: ollariagestao
+                  </button>
+                </div>
+              </div>
 
               <div className="pt-3 text-center">
                 <p className="text-[11px] text-[#8C7A6E]">

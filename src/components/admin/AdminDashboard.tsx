@@ -23,11 +23,16 @@ import {
   FileText,
   AlertCircle,
   Pencil,
-  UserPlus
+  UserPlus,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  Database
 } from 'lucide-react';
 import { MonthlyReportView } from './MonthlyReportView';
 import { EditStudentModal } from './EditStudentModal';
 import { AddStudentModal } from './AddStudentModal';
+import { ImportStudentsModal } from './ImportStudentsModal';
 import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift, Student } from '../../types';
 
 interface AdminDashboardProps {
@@ -46,6 +51,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
     setRole,
     generateNewAccessKey,
     deleteStudent,
+    importStudents,
+    exportStudentsCSV,
+    exportFullBackupJSON,
     registerAttendance,
     deleteAttendance,
     addPiece,
@@ -69,6 +77,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
 
   // Student CRUD Modals
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
@@ -444,6 +453,63 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       {activeAdminTab === 'students' && (
         <div className="space-y-4">
           
+          {/* Backup, Import and Export Actions Bar */}
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5] rounded-2xl p-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 mt-0.5">
+                <Database className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-[#2C241E]">
+                    Base de Cadastros e Preservação de Dados
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    {students.length} alunos preservados
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7A6A5E] mt-0.5 leading-relaxed">
+                  Os dados ficam guardados no seu navegador e não são perdidos ao atualizar. Se você precisar recadastrar, restaurar respostas ou levar para outro computador, use as opções de importação e exportação de planilha abaixo.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto shrink-0 justify-end">
+              <button
+                id="btn-import-spreadsheet"
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl border border-[#D5CBC0] bg-white hover:bg-[#FAF0E6] text-[#2C241E] text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Importar planilha de respostas (CSV/Excel) para cadastrar alunos em lote"
+              >
+                <Upload className="w-3.5 h-3.5 text-[#D97736]" />
+                <span>Importar Planilha</span>
+              </button>
+
+              <button
+                id="btn-export-spreadsheet"
+                type="button"
+                onClick={exportStudentsCSV}
+                className="px-3.5 py-2 rounded-xl border border-[#D5CBC0] bg-white hover:bg-[#FAF0E6] text-[#2C241E] text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Baixar planilha de todos os alunos com senhas e contatos em formato CSV compatível com Excel"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Baixar Alunos (Excel/CSV)</span>
+              </button>
+
+              <button
+                id="btn-export-backup-json"
+                type="button"
+                onClick={exportFullBackupJSON}
+                className="px-3 py-2 rounded-xl bg-[#2C241E] hover:bg-[#43372E] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Baixar arquivo de backup completo com alunos, peças, chamadas e pagamentos"
+              >
+                <Database className="w-3.5 h-3.5 text-[#E6A15C]" />
+                <span>Backup Geral</span>
+              </button>
+            </div>
+          </div>
+
           {/* Filter and search bar + Incluir Aluno */}
           <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
             <div className="relative flex-1">
@@ -1335,6 +1401,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
         isOpen={isAddStudentOpen}
         onClose={() => setIsAddStudentOpen(false)}
         onOpenFullWizard={onOpenRegistration}
+      />
+
+      {/* Import Students Spreadsheet Modal */}
+      <ImportStudentsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={(importedList, mode) => {
+          importStudents(importedList, mode);
+        }}
       />
 
     </div>

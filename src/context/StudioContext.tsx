@@ -21,6 +21,7 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_CHANGE_REQUESTS
 } from '../data/seedData';
+import { exportStudentsToCSV, exportFullBackupJSON as exportBackupJSONHelper } from '../utils/spreadsheet';
 
 interface StudioContextType {
   role: UserRole;
@@ -39,11 +40,14 @@ interface StudioContextType {
   loginAsAdmin: (password: string) => { success: boolean; message?: string };
   logout: () => void;
 
-  // Student CRUD
+  // Student CRUD & Spreadsheet Backup/Import
   createStudentFromForm: (formData: RegistrationFormData) => Student;
   updateStudent: (updatedStudent: Student) => void;
   deleteStudent: (studentId: string) => void;
   generateNewAccessKey: (studentId: string) => string;
+  importStudents: (importedList: Student[], mode: 'merge' | 'replace') => void;
+  exportStudentsCSV: () => void;
+  exportFullBackupJSON: () => void;
 
   // Pieces
   addPiece: (piece: Omit<PotteryPiece, 'id' | 'createdAt'>) => PotteryPiece;
@@ -81,51 +85,107 @@ const StudioContext = createContext<StudioContextType | undefined>(undefined);
 const STORAGE_KEY_PREFIX = 'ollaria_atelie_';
 
 export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load from localStorage or seed
+  // Multi-tier load from localStorage to guarantee no data loss on reload or update
   const [students, setStudents] = useState<Student[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}students`);
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS;
+    try {
+      const v2 = localStorage.getItem(`${STORAGE_KEY_PREFIX}students_v2`);
+      if (v2) {
+        const parsed = JSON.parse(v2);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const legacy = localStorage.getItem(`${STORAGE_KEY_PREFIX}students`);
+      if (legacy) {
+        const parsed = JSON.parse(legacy);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const backup = localStorage.getItem(`${STORAGE_KEY_PREFIX}students_backup`);
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (err) {
+      console.error('Erro ao ler alunos do armazenamento local:', err);
+    }
+    return INITIAL_STUDENTS;
   });
 
   const [pieces, setPieces] = useState<PotteryPiece[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}pieces`);
-    return saved ? JSON.parse(saved) : INITIAL_PIECES;
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}pieces`);
+      return saved ? JSON.parse(saved) : INITIAL_PIECES;
+    } catch {
+      return INITIAL_PIECES;
+    }
   });
 
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}attendance`);
-    return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}attendance`);
+      return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
+    } catch {
+      return INITIAL_ATTENDANCE;
+    }
   });
 
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}transactions`);
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}transactions`);
+      return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
+    } catch {
+      return INITIAL_TRANSACTIONS;
+    }
   });
 
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}notifications`);
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}notifications`);
+      return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    } catch {
+      return INITIAL_NOTIFICATIONS;
+    }
   });
 
   const [changeRequests, setChangeRequests] = useState<ProfileChangeRequest[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}changeRequests`);
-    return saved ? JSON.parse(saved) : INITIAL_CHANGE_REQUESTS;
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}changeRequests`);
+      return saved ? JSON.parse(saved) : INITIAL_CHANGE_REQUESTS;
+    } catch {
+      return INITIAL_CHANGE_REQUESTS;
+    }
   });
 
+  // Default to 'guest' when accessing the app URL unless an active session was already authenticated
   const [role, setRoleState] = useState<UserRole>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}role`);
-    return (saved as UserRole) || 'admin';
+    try {
+      const savedRole = localStorage.getItem(`${STORAGE_KEY_PREFIX}role`);
+      if (savedRole === 'admin' || savedRole === 'student') {
+        return savedRole as UserRole;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return 'guest';
   });
+
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(() => {
-    return localStorage.getItem(`${STORAGE_KEY_PREFIX}currentStudentId`) || 'student-1';
+    try {
+      return localStorage.getItem(`${STORAGE_KEY_PREFIX}currentStudentId`) || null;
+    } catch {
+      return null;
+    }
   });
 
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}role`, newRole);
+    if (newRole === 'guest') {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}role`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}currentStudentId`);
+    } else {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}role`, newRole);
+    }
   };
 
-  // Persistence effects
+  // Persistence effects with mirrors
   useEffect(() => {
     if (currentStudentId) {
       localStorage.setItem(`${STORAGE_KEY_PREFIX}currentStudentId`, currentStudentId);
@@ -135,7 +195,15 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentStudentId]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}students`, JSON.stringify(students));
+    try {
+      const json = JSON.stringify(students);
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}students_v2`, json);
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}students`, json);
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}students_backup`, json);
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}last_sync`, new Date().toISOString());
+    } catch (err) {
+      console.error('Erro ao salvar alunos:', err);
+    }
   }, [students]);
 
   useEffect(() => {
@@ -165,25 +233,52 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const loginAsStudent = (identifier: string, pin: string) => {
-    const cleanId = identifier.trim().toUpperCase();
+    const cleanInput = identifier.trim();
     const cleanPin = pin.trim();
-    const student = students.find(
-      (s) =>
-        (s.accessCode.toUpperCase() === cleanId ||
-          s.email.toLowerCase() === identifier.trim().toLowerCase() ||
-          s.registrationData.cpfOuPassaporte.replace(/\D/g, '') === identifier.replace(/\D/g, '')) &&
-        s.pin === cleanPin
-    );
 
-    if (student) {
-      setCurrentStudentId(student.id);
-      setRole('student');
-      return { success: true };
+    if (!cleanInput || !cleanPin) {
+      return {
+        success: false,
+        message: 'Por favor, informe seu e-mail de cadastro e sua senha gerada pelo aplicativo.'
+      };
     }
-    return {
-      success: false,
-      message: 'Código de acesso ou PIN incorretos. A chave de acesso é estritamente pessoal e fornecida exclusivamente pela coordenação do ateliê.'
-    };
+
+    const cleanEmail = cleanInput.toLowerCase();
+    const cleanCode = cleanInput.toUpperCase();
+    const cleanCpf = cleanInput.replace(/\D/g, '');
+
+    const student = students.find((s) => {
+      const sEmail = s.email?.trim().toLowerCase();
+      const sRegEmail = s.registrationData?.email?.trim().toLowerCase();
+      const sCode = s.accessCode?.trim().toUpperCase();
+      const sCpf = (s.registrationData?.cpfOuPassaporte || '').replace(/\D/g, '');
+
+      return (
+        sEmail === cleanEmail ||
+        sRegEmail === cleanEmail ||
+        sCode === cleanCode ||
+        (cleanCpf.length >= 8 && sCpf === cleanCpf)
+      );
+    });
+
+    if (!student) {
+      return {
+        success: false,
+        message: 'E-mail de cadastro não encontrado. Certifique-se de digitar o mesmo e-mail fornecido na sua matrícula no ateliê.'
+      };
+    }
+
+    // Match with generated PIN or Code
+    if (student.pin !== cleanPin && student.accessCode.toUpperCase() !== cleanPin.toUpperCase()) {
+      return {
+        success: false,
+        message: 'Senha incorreta para o e-mail informado. Digite a senha/PIN numérica de acesso fornecida pelo aplicativo.'
+      };
+    }
+
+    setCurrentStudentId(student.id);
+    setRole('student');
+    return { success: true };
   };
 
   const loginAsAdmin = (password: string) => {
@@ -191,12 +286,14 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setRole('admin');
       return { success: true };
     }
-    return { success: false, message: 'Senha incorreta para acesso administrativo.' };
+    return { success: false, message: 'Senha incorreta para acesso da coordenação.' };
   };
 
   const logout = () => {
     setRole('guest');
     setCurrentStudentId(null);
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}role`);
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}currentStudentId`);
   };
 
   const generateNewAccessKey = (studentId: string): string => {
@@ -725,8 +822,79 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   };
 
+  const importStudents = (importedList: Student[], mode: 'merge' | 'replace') => {
+    if (mode === 'replace') {
+      setStudents(importedList);
+    } else {
+      // Merge mode: update existing students by email or CPF, append new ones
+      setStudents((prev) => {
+        const updated = [...prev];
+        for (const imp of importedList) {
+          const impEmail = imp.email.trim().toLowerCase();
+          const impCpf = imp.registrationData?.cpfOuPassaporte?.replace(/\D/g, '') || '';
+          
+          const existingIdx = updated.findIndex((s) => {
+            const sEmail = s.email.trim().toLowerCase();
+            const sCpf = s.registrationData?.cpfOuPassaporte?.replace(/\D/g, '') || '';
+            return sEmail === impEmail || (impCpf.length >= 8 && sCpf === impCpf);
+          });
+
+          if (existingIdx !== -1) {
+            updated[existingIdx] = {
+              ...updated[existingIdx],
+              nome: imp.nome || updated[existingIdx].nome,
+              whatsapp: imp.whatsapp || updated[existingIdx].whatsapp,
+              turma: imp.turma || updated[existingIdx].turma,
+              modalidade: imp.modalidade || updated[existingIdx].modalidade,
+              pin: updated[existingIdx].pin || imp.pin,
+              accessCode: updated[existingIdx].accessCode || imp.accessCode,
+              registrationData: {
+                ...updated[existingIdx].registrationData,
+                ...imp.registrationData,
+                aceitouTermoRegulamento:
+                  updated[existingIdx].registrationData.aceitouTermoRegulamento ||
+                  imp.registrationData.aceitouTermoRegulamento,
+                dataAceiteTermoRegulamento:
+                  updated[existingIdx].registrationData.dataAceiteTermoRegulamento ||
+                  imp.registrationData.dataAceiteTermoRegulamento
+              }
+            };
+          } else {
+            updated.push(imp);
+          }
+        }
+        return updated;
+      });
+    }
+
+    createNotification(
+      undefined,
+      'comunicado',
+      'Planilha de Alunos Sincronizada',
+      `${importedList.length} cadastros de alunos foram processados e integrados com sucesso.`,
+      'baixa'
+    );
+  };
+
+  const exportStudentsCSV = () => {
+    exportStudentsToCSV(students);
+  };
+
+  const exportFullBackupJSON = () => {
+    exportBackupJSONHelper({
+      students,
+      pieces,
+      attendance,
+      transactions,
+      notifications,
+      changeRequests
+    });
+  };
+
   const resetDatabase = () => {
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}students_v2`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}students`);
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}students_backup`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}pieces`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}attendance`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}transactions`);
@@ -761,6 +929,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updateStudent,
         deleteStudent,
         generateNewAccessKey,
+        importStudents,
+        exportStudentsCSV,
+        exportFullBackupJSON,
         addPiece,
         updatePieceStage,
         updatePieceEvaluation,
