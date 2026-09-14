@@ -42,6 +42,7 @@ interface StudioContextType {
   // Student CRUD
   createStudentFromForm: (formData: RegistrationFormData) => Student;
   updateStudent: (updatedStudent: Student) => void;
+  deleteStudent: (studentId: string) => void;
   generateNewAccessKey: (studentId: string) => string;
 
   // Pieces
@@ -305,6 +306,19 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateStudent = (updated: Student) => {
     setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  };
+
+  const deleteStudent = (studentId: string) => {
+    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+    setPieces((prev) => prev.filter((p) => p.studentId !== studentId));
+    setAttendance((prev) => prev.filter((a) => a.studentId !== studentId));
+    setTransactions((prev) => prev.filter((t) => t.studentId !== studentId));
+    setNotifications((prev) => prev.filter((n) => n.studentId !== studentId));
+    setChangeRequests((prev) => prev.filter((r) => r.studentId !== studentId));
+    if (currentStudent?.id === studentId) {
+      setCurrentStudentId(null);
+      setRole('admin');
+    }
   };
 
   const addPiece = (pieceData: Omit<PotteryPiece, 'id' | 'createdAt'>): PotteryPiece => {
@@ -707,6 +721,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         logout,
         createStudentFromForm,
         updateStudent,
+        deleteStudent,
         generateNewAccessKey,
         addPiece,
         updatePieceStage,

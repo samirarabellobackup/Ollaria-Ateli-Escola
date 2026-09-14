@@ -21,10 +21,14 @@ import {
   RefreshCw,
   Clock,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  UserPlus
 } from 'lucide-react';
 import { MonthlyReportView } from './MonthlyReportView';
-import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift } from '../../types';
+import { EditStudentModal } from './EditStudentModal';
+import { AddStudentModal } from './AddStudentModal';
+import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift, Student } from '../../types';
 
 interface AdminDashboardProps {
   onOpenRegistration: () => void;
@@ -41,6 +45,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
     setCurrentStudentById,
     setRole,
     generateNewAccessKey,
+    deleteStudent,
     registerAttendance,
     deleteAttendance,
     addPiece,
@@ -61,6 +66,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
   const [searchTerm, setSearchTerm] = useState('');
   const [filterShift, setFilterShift] = useState<string>('todos');
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+
+  // Student CRUD Modals
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
   // New Piece Modal
   const [isAddPieceOpen, setIsAddPieceOpen] = useState(false);
@@ -434,8 +444,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       {activeAdminTab === 'students' && (
         <div className="space-y-4">
           
-          {/* Filter and search bar */}
-          <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+          {/* Filter and search bar + Incluir Aluno */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-[#7A6A5E] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -447,16 +457,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
               />
             </div>
 
-            <select
-              value={filterShift}
-              onChange={(e) => setFilterShift(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-xs font-semibold text-[#4A3E35]"
-            >
-              <option value="todos">Todas as Turmas</option>
-              <option value="quarta-tarde">Quarta Tarde (15h20)</option>
-              <option value="quarta-noite">Quarta Noite (18h20)</option>
-              <option value="sabado-manha">Sábado Manhã (09h30)</option>
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={filterShift}
+                onChange={(e) => setFilterShift(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-xs font-semibold text-[#4A3E35]"
+              >
+                <option value="todos">Todas as Turmas</option>
+                <option value="quarta-tarde">Quarta Tarde (15h20)</option>
+                <option value="quarta-noite">Quarta Noite (18h20)</option>
+                <option value="sabado-manha">Sábado Manhã (09h30)</option>
+                <option value="terca-noite">Terça Noite (18h20)</option>
+              </select>
+
+              <button
+                id="btn-incluir-aluno-tab"
+                onClick={() => setIsAddStudentOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-[#2C241E] text-white text-xs font-bold hover:bg-[#43372E] flex items-center gap-1.5 transition-colors shadow-xs whitespace-nowrap"
+                title="Incluir novo aluno no ateliê"
+              >
+                <UserPlus className="w-4 h-4 text-[#E6A15C]" />
+                <span>Incluir Aluno</span>
+              </button>
+            </div>
           </div>
 
           {/* Students Table */}
@@ -538,6 +561,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
 
                       <td className="p-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Edit Student Profile */}
+                          <button
+                            id={`btn-edit-student-${st.id}`}
+                            onClick={() => setEditingStudent(st)}
+                            className="p-1.5 rounded-lg border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] hover:bg-[#EBE4DA] hover:text-[#D97736] transition-colors"
+                            title="Editar perfil completo do aluno"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+
+                          {/* Delete Student */}
+                          <button
+                            id={`btn-delete-student-${st.id}`}
+                            onClick={() => setDeletingStudent(st)}
+                            className="p-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                            title="Excluir aluno do ateliê"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
                           {/* Copy WhatsApp Credentials */}
                           <button
                             onClick={() => copyStudentAccessText(st)}
@@ -557,7 +600,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                             title="Acessar portal isolado deste aluno"
                           >
                             <Eye className="w-3.5 h-3.5 text-[#E6A15C]" />
-                            <span>Ver Aluno</span>
+                            <span>Ver</span>
                           </button>
                         </div>
                       </td>
@@ -1235,6 +1278,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
           </div>
         </div>
       )}
+
+      {/* Delete Student Confirmation Modal */}
+      {deletingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white max-w-md w-full rounded-2xl border border-red-200 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-xs">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            
+            <div className="text-center">
+              <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                Excluir Matrícula do Aluno?
+              </h3>
+              <p className="text-xs text-[#7A6A5E] mt-1.5 leading-relaxed">
+                Tem certeza que deseja excluir permanentemente o cadastro de <strong>{deletingStudent.nome}</strong> (Código: <span className="font-mono font-bold text-[#D97736]">{deletingStudent.accessCode}</span>)?
+              </p>
+              <p className="text-[11px] text-red-600 font-medium bg-red-50 p-2.5 rounded-xl mt-3 border border-red-100">
+                Esta ação removerá as peças registradas, histórico de aulas e cobranças deste aluno no ateliê.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingStudent(null)}
+                className="flex-1 py-2.5 rounded-xl border border-[#D5CBC0] text-xs font-semibold text-[#4A3E35] hover:bg-[#FAF8F5] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                id="btn-confirm-delete-student"
+                onClick={() => {
+                  deleteStudent(deletingStudent.id);
+                  setDeletingStudent(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-xs"
+              >
+                Sim, Excluir Aluno
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      <EditStudentModal
+        isOpen={!!editingStudent}
+        student={editingStudent}
+        onClose={() => setEditingStudent(null)}
+      />
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        isOpen={isAddStudentOpen}
+        onClose={() => setIsAddStudentOpen(false)}
+        onOpenFullWizard={onOpenRegistration}
+      />
 
     </div>
   );
