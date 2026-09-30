@@ -36,8 +36,9 @@ interface StudioContextType {
   // Auth & Roles
   setRole: (role: UserRole) => void;
   setCurrentStudentById: (studentId: string) => void;
-  loginAsStudent: (identifier: string, pin: string) => { success: boolean; message?: string };
-  loginAsAdmin: (password: string) => { success: boolean; message?: string };
+  selectStudent: (studentId: string) => void;
+  loginAsStudent: (identifier: string, pin?: string) => { success: boolean; message?: string };
+  loginAsAdmin: (password?: string) => { success: boolean; message?: string };
   logout: () => void;
 
   // Student CRUD & Spreadsheet Backup/Import
@@ -232,14 +233,21 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentStudentId(id);
   };
 
-  const loginAsStudent = (identifier: string, pin: string) => {
-    const cleanInput = identifier.trim();
-    const cleanPin = pin.trim();
+  const selectStudent = (studentId: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (student) {
+      setCurrentStudentId(student.id);
+      setRole('student');
+    }
+  };
 
-    if (!cleanInput || !cleanPin) {
+  const loginAsStudent = (identifier: string, _pin?: string) => {
+    const cleanInput = identifier.trim();
+
+    if (!cleanInput) {
       return {
         success: false,
-        message: 'Por favor, informe seu e-mail de cadastro e sua senha gerada pelo aplicativo.'
+        message: 'Por favor, selecione seu nome ou informe seu e-mail de cadastro.'
       };
     }
 
@@ -248,31 +256,30 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const cleanCpf = cleanInput.replace(/\D/g, '');
 
     const student = students.find((s) => {
-      const sEmail = s.email?.trim().toLowerCase();
-      const sRegEmail = s.registrationData?.email?.trim().toLowerCase();
-      const sCode = s.accessCode?.trim().toUpperCase();
+      const sId = s.id;
+      const sName = (s.nome || '').toLowerCase();
+      const sPrefName = (s.registrationData?.nomePreferencia || '').toLowerCase();
+      const sEmail = (s.email || '').trim().toLowerCase();
+      const sRegEmail = (s.registrationData?.email || '').trim().toLowerCase();
+      const sCode = (s.accessCode || '').trim().toUpperCase();
       const sCpf = (s.registrationData?.cpfOuPassaporte || '').replace(/\D/g, '');
 
       return (
+        sId === cleanInput ||
         sEmail === cleanEmail ||
         sRegEmail === cleanEmail ||
         sCode === cleanCode ||
-        (cleanCpf.length >= 8 && sCpf === cleanCpf)
+        (cleanCpf.length >= 8 && sCpf === cleanCpf) ||
+        sName === cleanEmail ||
+        sPrefName === cleanEmail ||
+        sName.includes(cleanEmail)
       );
     });
 
     if (!student) {
       return {
         success: false,
-        message: 'E-mail de cadastro não encontrado. Certifique-se de digitar o mesmo e-mail fornecido na sua matrícula no ateliê.'
-      };
-    }
-
-    // Match with generated PIN or Code
-    if (student.pin !== cleanPin && student.accessCode.toUpperCase() !== cleanPin.toUpperCase()) {
-      return {
-        success: false,
-        message: 'Senha incorreta para o e-mail informado. Digite a senha/PIN numérica de acesso fornecida pelo aplicativo.'
+        message: 'Aluno não encontrado. Selecione seu nome na lista ou confira o e-mail informado.'
       };
     }
 
@@ -281,12 +288,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { success: true };
   };
 
-  const loginAsAdmin = (password: string) => {
-    if (password.trim() === 'ollariagestao') {
-      setRole('admin');
-      return { success: true };
-    }
-    return { success: false, message: 'Senha incorreta para acesso da coordenação.' };
+  const loginAsAdmin = (_password?: string) => {
+    setRole('admin');
+    return { success: true };
   };
 
   const logout = () => {
@@ -922,6 +926,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         changeRequests,
         setRole,
         setCurrentStudentById,
+        selectStudent,
         loginAsStudent,
         loginAsAdmin,
         logout,

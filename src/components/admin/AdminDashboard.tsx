@@ -130,7 +130,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
   const studentsToRenew = students.filter((s) => s.aulasRestantes <= 2 && s.status === 'ativo');
 
   const copyStudentAccessText = (student: typeof students[0]) => {
-    const text = `*OLLARIA ATELIÊ - DADOS DE ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de acesso pessoal para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• PIN de Segurança: *${student.pin}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Sah Pereira | Ollaria Cerâmica - Brasília DF_`;
+    const text = `*OLLARIA ATELIÊ - ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de matrícula para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Sah Pereira | Ollaria Cerâmica - Brasília DF_`;
     navigator.clipboard.writeText(text);
     setCopiedKeyId(student.id);
     setTimeout(() => setCopiedKeyId(null), 2000);
@@ -250,7 +250,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       <div className="flex border-b border-[#E0D7CC] gap-2 overflow-x-auto pb-px">
         {[
           { id: 'overview', label: 'Visão Geral', icon: TrendingUp },
-          { id: 'students', label: 'Alunos & Senhas', icon: Users, badge: students.length },
+          { id: 'students', label: 'Alunos & Matrículas', icon: Users, badge: students.length },
           { id: 'attendance', label: 'Presença & Aulas', icon: Calendar },
           { id: 'pieces', label: 'Peças & Fornos', icon: Flame, badge: piecesInKiln },
           { id: 'finance', label: 'Financeiro & Vendas', icon: CreditCard, badge: totalPendingFinance > 0 ? `R$ ${totalPendingFinance.toFixed(0)}` : undefined },
@@ -449,7 +449,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
         </div>
       )}
 
-      {/* 2. TAB: ALUNOS & SENHAS */}
+      {/* 2. TAB: ALUNOS & MATRÍCULAS */}
       {activeAdminTab === 'students' && (
         <div className="space-y-4">
           
@@ -491,7 +491,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                 type="button"
                 onClick={exportStudentsCSV}
                 className="px-3.5 py-2 rounded-xl border border-[#D5CBC0] bg-white hover:bg-[#FAF0E6] text-[#2C241E] text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
-                title="Baixar planilha de todos os alunos com senhas e contatos em formato CSV compatível com Excel"
+                title="Baixar planilha de todos os alunos em formato CSV compatível com Excel"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Baixar Alunos (Excel/CSV)</span>
@@ -555,7 +555,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                 <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
                   <tr>
                     <th className="p-3.5">Aluno & Contato</th>
-                    <th className="p-3.5">Código de Acesso & PIN</th>
+                    <th className="p-3.5">Matrícula</th>
                     <th className="p-3.5">Turma & Plano</th>
                     <th className="p-3.5">Progresso Aulas</th>
                     <th className="p-3.5">Status</th>
@@ -581,19 +581,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
 
                       <td className="p-3.5">
                         <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3]">
-                              {st.accessCode}
-                            </span>
-                            <span className="text-[11px] text-[#7A6A5E]">PIN: {st.pin}</span>
-                          </div>
-                          <button
-                            onClick={() => generateNewAccessKey(st.id)}
-                            className="text-[10px] text-[#7A6A5E] hover:text-[#2C241E] flex items-center gap-1 underline pt-0.5"
-                            title="Gerar nova chave de acesso aleatória"
-                          >
-                            <RefreshCw className="w-2.5 h-2.5" /> Gerar nova senha
-                          </button>
+                          <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3] inline-block">
+                            {st.accessCode}
+                          </span>
+                          <span className="text-[11px] text-[#7A6A5E] block font-mono truncate max-w-[140px]">{st.email}</span>
                         </div>
                       </td>
 
@@ -651,7 +642,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                           <button
                             onClick={() => copyStudentAccessText(st)}
                             className="p-1.5 rounded-lg border border-[#D5CBC0] bg-[#FAF8F5] text-[#4A3E35] hover:bg-[#EBE4DA] transition-colors"
-                            title="Copiar link e senha para enviar no WhatsApp do aluno"
+                            title="Copiar dados para enviar no WhatsApp do aluno"
                           >
                             {copiedKeyId === st.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                           </button>

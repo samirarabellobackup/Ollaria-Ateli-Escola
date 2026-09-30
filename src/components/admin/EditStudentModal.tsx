@@ -230,7 +230,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
             }`}
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>Acesso & Senha</span>
+            <span>Identificação & Matrícula</span>
           </button>
 
           <button
@@ -528,64 +528,38 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               </div>
             )}
 
-            {/* TAB 3: ACESSO & SENHA */}
+            {/* TAB 3: IDENTIFICAÇÃO & MATRÍCULA */}
             {activeTab === 'acesso' && (
               <div className="space-y-4">
                 <div className="bg-[#FAF0E6] p-4 rounded-xl border border-[#F0D5C3] text-xs text-[#6B5A4D] space-y-1">
-                  <strong className="text-[#2C241E] block">Credenciais Individuais do Aluno</strong>
+                  <strong className="text-[#2C241E] block">Identificação do Aluno no Ateliê</strong>
                   <p>
-                    O aluno utiliza este código e PIN numérico para acessar suas peças, presenças e financeiro na página de entrada. Você pode editar diretamente ou regerar se o aluno solicitar.
+                    O código de matrícula (OL-XXXX) identifica o aluno de forma única no ateliê e facilita a localização rápida de suas peças e presenças.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-[#E6DFD5] space-y-2">
-                    <label className="block text-xs font-bold text-[#4A3E35]">
-                      Código de Acesso
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={formData.accessCode}
-                        onChange={(e) => setFormData({ ...formData, accessCode: e.target.value.toUpperCase() })}
-                        className="flex-1 px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-sm font-mono font-bold text-[#D97736]"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleGenerateCode}
-                        className="px-3 py-2 rounded-xl border border-[#D5CBC0] text-xs font-semibold text-[#4A3E35] hover:bg-[#FAF8F5] flex items-center gap-1"
-                        title="Gerar novo código aleatório"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <span className="text-[11px] text-[#7A6A5E] block">Padrão Ollaria: OL-XXXX</span>
+                <div className="bg-white p-4 rounded-xl border border-[#E6DFD5] space-y-2 max-w-md">
+                  <label className="block text-xs font-bold text-[#4A3E35]">
+                    Código de Matrícula (Acesso)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.accessCode}
+                      onChange={(e) => setFormData({ ...formData, accessCode: e.target.value.toUpperCase() })}
+                      className="flex-1 px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-sm font-mono font-bold text-[#D97736]"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGenerateCode}
+                      className="px-3 py-2 rounded-xl border border-[#D5CBC0] text-xs font-semibold text-[#4A3E35] hover:bg-[#FAF8F5] flex items-center gap-1"
+                      title="Gerar novo código aleatório"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-
-                  <div className="bg-white p-4 rounded-xl border border-[#E6DFD5] space-y-2">
-                    <label className="block text-xs font-bold text-[#4A3E35]">
-                      PIN Numérico (Senha)
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={formData.pin}
-                        onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
-                        className="flex-1 px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-sm font-mono font-bold text-[#2C241E]"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleGeneratePin}
-                        className="px-3 py-2 rounded-xl border border-[#D5CBC0] text-xs font-semibold text-[#4A3E35] hover:bg-[#FAF8F5] flex items-center gap-1"
-                        title="Gerar novo PIN de 4 dígitos"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <span className="text-[11px] text-[#7A6A5E] block">Senha numérica de 4 a 6 dígitos</span>
-                  </div>
+                  <span className="text-[11px] text-[#7A6A5E] block">Padrão Ollaria: OL-XXXX</span>
                 </div>
               </div>
             )}

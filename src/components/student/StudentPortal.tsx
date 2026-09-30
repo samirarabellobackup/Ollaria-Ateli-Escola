@@ -223,10 +223,10 @@ export const StudentPortal: React.FC = () => {
 
             <div className="text-left">
               <span className="text-[10px] uppercase font-bold text-[#7A6A5E] tracking-wider block">
-                PIN de Segurança
+                Turma & Turno
               </span>
-              <span className="font-mono text-base font-bold text-[#2C241E] tracking-wider">
-                {currentStudent.pin}
+              <span className="font-semibold text-sm text-[#2C241E] capitalize">
+                {currentStudent.turma.replace('-', ' ')}
               </span>
             </div>
           </div>

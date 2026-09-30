@@ -83,7 +83,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   const handleCopyAccess = () => {
     if (!createdStudent) return;
-    const msg = `Olá, ${createdStudent.registrationData.nomePreferencia || createdStudent.nome}! Seja muito bem-vinda(o) à Ollaria Ateliê de Cerâmica.\n\nSeu acesso ao Portal do Aluno está pronto:\n🔑 Código de Acesso: ${createdStudent.accessCode}\n🔒 PIN / Senha: ${createdStudent.pin}\nTurma: ${createdStudent.turma}\n\n📌 *Importante:* No seu primeiro acesso ao aplicativo, você visualizará as Regras e o Regulamento do Ateliê para sua leitura e aceite direto.\n\nAcesse o sistema da Ollaria para acompanhar suas peças, queimas, presenças e financeiro!`;
+    const msg = `Olá, ${createdStudent.registrationData.nomePreferencia || createdStudent.nome}! Seja muito bem-vinda(o) à Ollaria Ateliê de Cerâmica.\n\nSeu acesso ao Portal do Aluno está pronto:\n🏷️ Código de Matrícula: ${createdStudent.accessCode}\n📅 Turma: ${createdStudent.turma}\n\n📌 *Importante:* No seu primeiro acesso ao aplicativo, você visualizará as Regras e o Regulamento do Ateliê para sua leitura e aceite direto.\n\nAcesse o sistema da Ollaria para acompanhar suas peças, queimas, presenças e financeiro!`;
     navigator.clipboard.writeText(msg);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2500);
@@ -144,15 +144,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
             <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] text-left space-y-2">
               <div className="flex justify-between items-center pb-2 border-b border-[#EBE4DA]">
-                <span className="text-xs text-[#7A6A5E]">Código de Acesso:</span>
+                <span className="text-xs text-[#7A6A5E]">Código de Matrícula:</span>
                 <span className="font-mono font-bold text-sm text-[#D97736] bg-[#FAF0E6] px-2.5 py-0.5 rounded-md border border-[#F0D5C3]">
                   {createdStudent.accessCode}
-                </span>
-              </div>
-              <div className="flex justify-between items-center pb-2 border-b border-[#EBE4DA]">
-                <span className="text-xs text-[#7A6A5E]">PIN / Senha:</span>
-                <span className="font-mono font-bold text-sm text-[#2C241E]">
-                  {createdStudent.pin}
                 </span>
               </div>
               <div className="flex justify-between items-center text-xs">

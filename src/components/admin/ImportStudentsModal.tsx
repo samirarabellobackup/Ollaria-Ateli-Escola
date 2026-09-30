@@ -102,12 +102,12 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
 
   const handleCopyAccessList = () => {
     const lines = parsedStudents.map((st, idx) => {
-      return `${idx + 1}. *${st.registrationData?.nomePreferencia || st.nome}*\n   📧 E-mail de Login: ${st.email}\n   🔑 Senha Gerada: ${st.pin}\n   🏷️ Código: ${st.accessCode}\n   📅 Turma: ${st.turma}`;
+      return `${idx + 1}. *${st.registrationData?.nomePreferencia || st.nome}*\n   📧 E-mail: ${st.email}\n   🏷️ Matrícula: ${st.accessCode}\n   📅 Turma: ${st.turma}`;
     });
 
-    const fullMessage = `🌿 *OLLARIA ATELIÊ — LISTA DE ACESSO DOS ALUNOS*\n\nPrezadas(os) alunas(os), seus acessos ao aplicativo oficial da Ollaria Ateliê estão disponíveis:\n\n${lines.join(
+    const fullMessage = `🌿 *OLLARIA ATELIÊ — LISTA DE ALUNOS CADASTRADOS*\n\nPrezadas(os) alunas(os), seus cadastros no aplicativo oficial da Ollaria Ateliê estão disponíveis:\n\n${lines.join(
       '\n\n'
-    )}\n\n📌 *Como acessar:* Abra o aplicativo e faça login informando seu E-mail de cadastro e a Senha Gerada informada acima. No primeiro acesso, será solicitada a leitura e o aceite do Regulamento do Ateliê.`;
+    )}\n\n📌 *Como acessar:* Abra o aplicativo e selecione seu nome para acompanhar suas peças no forno, presenças e mensalidades.`;
 
     navigator.clipboard.writeText(fullMessage);
     setCopiedSummary(true);
@@ -137,7 +137,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                 Importar Planilha de Alunos & Respostas
               </h3>
               <p className="text-xs text-[#7A6A5E]">
-                Restauração de cadastros, importação de formulários Google e geração automática de senhas
+                Restauração de cadastros e importação de formulários Google / Excel
               </p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                     Planilha Reconhecida com Sucesso!
                   </h4>
                   <p className="text-xs text-[#7A6A5E]">
-                    Identificados <strong>{parsedStudents.length} alunos</strong> com e-mails e senhas geradas.
+                    Identificados <strong>{parsedStudents.length} alunos</strong> prontos para cadastro.
                   </p>
                 </div>
 
@@ -300,9 +300,8 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                     <tr>
                       <th className="p-3">#</th>
                       <th className="p-3">Aluno</th>
-                      <th className="p-3">E-mail (Login)</th>
-                      <th className="p-3">Senha Gerada (PIN)</th>
-                      <th className="p-3">Código</th>
+                      <th className="p-3">E-mail</th>
+                      <th className="p-3">Matrícula</th>
                       <th className="p-3">Turma</th>
                       <th className="p-3">Plano</th>
                     </tr>
@@ -313,11 +312,6 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                         <td className="p-3 font-mono text-[11px] text-[#8C7A6E]">{idx + 1}</td>
                         <td className="p-3 font-semibold text-[#2C241E]">{st.nome}</td>
                         <td className="p-3 text-[#5C4D41] font-mono text-[11px]">{st.email}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-mono font-bold text-[11px] border border-emerald-200">
-                            {st.pin}
-                          </span>
-                        </td>
                         <td className="p-3 font-mono text-[11px] text-[#D97736] font-bold">{st.accessCode}</td>
                         <td className="p-3 text-[#5C4D41] capitalize">{st.turma.replace('-', ' ')}</td>
                         <td className="p-3 text-[#5C4D41] capitalize">{st.modalidade}</td>
@@ -360,7 +354,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                   Alunos Importados com Sucesso!
                 </h4>
                 <p className="text-xs text-[#7A6A5E] mt-1 max-w-md mx-auto leading-relaxed">
-                  Os cadastros foram integrados e salvos permanentemente no sistema. As senhas de acesso geradas para cada aluno estão prontas para envio.
+                  Os cadastros foram integrados e salvos permanentemente no sistema para acompanhamento de aulas e queimas.
                 </p>
               </div>
 
@@ -376,10 +370,10 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                   </div>
                   <div>
                     <strong className="block text-xs font-bold text-[#2C241E]">
-                      {copiedSummary ? 'Lista Copiada!' : 'Copiar Acessos (WhatsApp)'}
+                      {copiedSummary ? 'Lista Copiada!' : 'Copiar Lista (WhatsApp)'}
                     </strong>
                     <span className="text-[11px] text-[#7A6A5E]">
-                      Copia a lista formatada com E-mails e Senhas geradas de todos os alunos.
+                      Copia a lista formatada com nomes, turmas e matrículas dos alunos.
                     </span>
                   </div>
                 </button>
@@ -394,10 +388,10 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                   </div>
                   <div>
                     <strong className="block text-xs font-bold text-[#2C241E]">
-                      Baixar Planilha com Senhas
+                      Baixar Planilha de Alunos
                     </strong>
                     <span className="text-[11px] text-[#7A6A5E]">
-                      Salva arquivo Excel/CSV com os dados completos e senhas geradas.
+                      Salva arquivo Excel/CSV com os dados cadastrais completos.
                     </span>
                   </div>
                 </button>

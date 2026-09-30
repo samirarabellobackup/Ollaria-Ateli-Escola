@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
               </div>
             ) : (
               <div className="text-xs text-[#7A6A5E] font-medium">
-                Portal de Acesso Restrito
+                Acesso ao Ateliê
               </div>
             )}
           </div>
@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
                 onClick={onOpenLogin}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#D97736] text-white hover:bg-[#C26224] transition-all shadow-xs"
               >
-                <KeyRound className="w-4 h-4" />
+                <User className="w-4 h-4" />
                 <span>Entrar no Sistema</span>
               </button>
             )}
@@ -152,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
             {currentStudent.registrationData.nomePreferencia || currentStudent.nome} ({currentStudent.accessCode})
           </span>
         ) : (
-          <span className="text-[#7A6A5E]">Acesso restrito Ollaria Ateliê</span>
+          <span className="text-[#7A6A5E]">Ollaria Ateliê de Cerâmica</span>
         )}
 
         {role === 'admin' ? (
@@ -167,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
             onClick={onOpenLogin}
             className="text-[#D97736] font-bold flex items-center gap-1 hover:underline"
           >
-            <KeyRound className="w-3.5 h-3.5" /> Entrar
+            <User className="w-3.5 h-3.5" /> Entrar
           </button>
         ) : null}
       </div>

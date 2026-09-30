@@ -127,7 +127,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
   const handleCopyCredentials = () => {
     if (!createdStudent) return;
-    const text = `*OLLARIA ATELIÊ - CREDENCIAIS DE ACESSO*\nOlá ${createdStudent.nome}!\nSua matrícula foi realizada com sucesso.\n\nCódigo de Acesso: ${createdStudent.accessCode}\nPIN: ${createdStudent.pin}\nTurma: ${createdStudent.turma}\n\nAcesse seu portal exclusivo para acompanhar suas peças, aulas e pagamentos!`;
+    const text = `*OLLARIA ATELIÊ - MATRÍCULA CONFIRMADA*\nOlá ${createdStudent.nome}!\nSua matrícula foi realizada com sucesso.\n\nCódigo de Matrícula: ${createdStudent.accessCode}\nTurma: ${createdStudent.turma}\n\nAcesse seu portal exclusivo para acompanhar suas peças, aulas e pagamentos!`;
     navigator.clipboard.writeText(text);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
@@ -201,12 +201,12 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
                 <div className="grid grid-cols-2 gap-3 bg-[#FAF8F5] p-3 rounded-xl border border-[#E6DFD5]">
                   <div>
-                    <span className="text-xs text-[#7A6A5E] block">Código de Acesso:</span>
+                    <span className="text-xs text-[#7A6A5E] block">Código de Matrícula:</span>
                     <strong className="text-xl font-mono text-[#D97736] tracking-wider">{createdStudent.accessCode}</strong>
                   </div>
                   <div>
-                    <span className="text-xs text-[#7A6A5E] block">PIN de Segurança:</span>
-                    <strong className="text-xl font-mono text-[#2C241E] tracking-wider">{createdStudent.pin}</strong>
+                    <span className="text-xs text-[#7A6A5E] block">Turma:</span>
+                    <strong className="text-sm font-semibold text-[#2C241E] capitalize">{createdStudent.turma}</strong>
                   </div>
                 </div>
 
@@ -221,7 +221,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                 className="mt-4 w-full py-2.5 rounded-xl border border-[#D97736] text-[#D97736] hover:bg-[#D97736]/10 font-semibold text-xs flex items-center justify-center gap-2 transition-all"
               >
                 {copiedKey ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                {copiedKey ? 'Copiado para a área de transferência!' : 'Copiar Credenciais para WhatsApp'}
+                {copiedKey ? 'Copiado para a área de transferência!' : 'Copiar Dados para WhatsApp'}
               </button>
             </div>
 
