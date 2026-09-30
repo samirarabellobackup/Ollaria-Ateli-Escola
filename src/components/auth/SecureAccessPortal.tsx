@@ -10,7 +10,12 @@ import {
   Clock,
   Phone,
   Layers,
-  Users
+  Users,
+  Eye,
+  EyeOff,
+  Lock,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 interface SecureAccessPortalProps {
@@ -18,11 +23,17 @@ interface SecureAccessPortalProps {
 }
 
 export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRegistration }) => {
-  const { students, selectStudent, loginAsStudent, loginAsAdmin } = useStudio();
+  const { students, loginAsStudent, loginAsAdmin } = useStudio();
 
   const [activeTab, setActiveTab] = useState<'student' | 'admin'>('student');
   const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id || '');
   const [searchQuery, setSearchQuery] = useState('');
+  const [studentPin, setStudentPin] = useState('');
+  const [showStudentPin, setShowStudentPin] = useState(false);
+  const [studentError, setStudentError] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPass, setShowAdminPass] = useState(false);
+  const [adminError, setAdminError] = useState('');
 
   const filteredStudents = students.filter((s) => {
     const q = searchQuery.toLowerCase();
@@ -37,17 +48,28 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
 
   const handleStudentAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedStudentId) {
-      selectStudent(selectedStudentId);
-    } else if (searchQuery.trim()) {
-      loginAsStudent(searchQuery);
-    } else if (students.length > 0) {
-      selectStudent(students[0].id);
+    setStudentError('');
+
+    const target = selectedStudentId || searchQuery;
+    if (!target.trim()) {
+      setStudentError('Por favor, selecione seu nome ou informe seu e-mail de cadastro.');
+      return;
+    }
+
+    const result = loginAsStudent(target, studentPin);
+    if (!result.success) {
+      setStudentError(result.message || 'Aluno não encontrado ou PIN incorreto.');
     }
   };
 
-  const handleAdminAccess = () => {
-    loginAsAdmin();
+  const handleAdminAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError('');
+
+    const result = loginAsAdmin(adminPassword);
+    if (!result.success) {
+      setAdminError(result.message || 'Senha incorreta.');
+    }
   };
 
   return (
@@ -78,7 +100,10 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
           <button
             id="tab-access-student"
             type="button"
-            onClick={() => setActiveTab('student')}
+            onClick={() => {
+              setActiveTab('student');
+              setStudentError('');
+            }}
             className={`flex-1 py-4 px-4 text-center font-serif text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2 ${
               activeTab === 'student'
                 ? 'bg-white text-[#2C241E] border-[#D97736]'
@@ -92,7 +117,10 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
           <button
             id="tab-access-admin"
             type="button"
-            onClick={() => setActiveTab('admin')}
+            onClick={() => {
+              setActiveTab('admin');
+              setAdminError('');
+            }}
             className={`flex-1 py-4 px-4 text-center font-serif text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2 ${
               activeTab === 'admin'
                 ? 'bg-white text-[#2C241E] border-[#2C241E]'
@@ -112,11 +140,18 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 <Sparkles className="w-5 h-5 text-[#D97736] shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
                   <strong className="text-[#2C241E] font-bold block text-sm mb-0.5">
-                    Acesso Direto ao Portal do Aluno
+                    Acesso Seguro ao Portal do Aluno
                   </strong>
-                  Selecione o seu nome na lista abaixo ou pesquise para acessar diretamente suas peças em forno, presenças e mensalidades.
+                  Selecione o seu nome na lista ou informe seu e-mail/matrícula e digite o seu PIN individual para acessar suas peças em forno, presenças e mensalidades.
                 </div>
               </div>
+
+              {studentError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{studentError}</span>
+                </div>
+              )}
 
               {/* Student Selector Dropdown */}
               <div>
@@ -126,7 +161,10 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 <select
                   id="select-student"
                   value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedStudentId(e.target.value);
+                    setStudentError('');
+                  }}
                   className="w-full px-3.5 py-3 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 cursor-pointer"
                 >
                   {students.map((st) => (
@@ -147,7 +185,11 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (e.target.value) setSelectedStudentId('');
+                      setStudentError('');
+                    }}
                     placeholder="Digite seu nome ou e-mail..."
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
                   />
@@ -157,14 +199,18 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
               {/* Quick Click Badges for Enrolled Students */}
               <div>
                 <p className="text-[11px] font-bold text-[#8C7A6E] uppercase tracking-wider mb-2">
-                  Clique diretamente no seu nome para entrar:
+                  Clique no seu nome para selecionar:
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
                   {filteredStudents.slice(0, 8).map((st) => (
                     <button
                       key={st.id}
                       type="button"
-                      onClick={() => selectStudent(st.id)}
+                      onClick={() => {
+                        setSelectedStudentId(st.id);
+                        setSearchQuery('');
+                        setStudentError('');
+                      }}
                       className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between group ${
                         selectedStudentId === st.id
                           ? 'border-[#D97736] bg-[#FAF0E6]'
@@ -185,11 +231,45 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 </div>
               </div>
 
+              {/* Student PIN field */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#4A3E35]">
+                    Senha / PIN de Acesso Individual *:
+                  </label>
+                  <span className="text-[11px] text-[#7A6A5E] font-medium">4 dígitos</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showStudentPin ? 'text' : 'password'}
+                    value={studentPin}
+                    onChange={(e) => {
+                      setStudentPin(e.target.value);
+                      setStudentError('');
+                    }}
+                    placeholder="Digite seu PIN (ex: 8421)"
+                    className="w-full px-3.5 py-3 pr-10 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentPin(!showStudentPin)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7A6A5E] hover:text-[#2C241E]"
+                  >
+                    {showStudentPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  Exemplos de PIN de teste: Bia: 8421 • Rodrigo: 2345 • Mari: 3456 • Lucas: 4567
+                </p>
+              </div>
+
               <button
                 id="btn-enter-student-portal"
                 type="submit"
                 className="w-full py-3.5 rounded-xl bg-[#D97736] hover:bg-[#C26224] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-99"
               >
+                <Lock className="w-4 h-4" />
                 <span>Acessar Meu Portal de Aluno(a)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
@@ -206,37 +286,72 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
             </form>
           ) : (
             /* Admin Panel Access */
-            <div className="space-y-6">
+            <form onSubmit={handleAdminAccess} className="space-y-6">
               <div className="bg-[#FAF8F5] border border-[#E0D7CC] rounded-2xl p-4 text-xs text-[#4A3E35] flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-[#2C241E] shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
                   <strong className="text-[#2C241E] font-bold block text-sm mb-0.5">
                     Painel Geral da Coordenação
                   </strong>
-                  Acesso para gerenciar turmas, registrar queimas no forno elétrico, fazer chamadas das aulas, controlar pagamentos e relatórios.
+                  Acesso protegido para gerenciar turmas, registrar queimas no forno elétrico, fazer chamadas das aulas, controlar pagamentos e relatórios.
                 </div>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#F7F3EE] border border-[#E6DFD5] space-y-3 text-xs text-[#6B5A4D]">
+              {adminError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{adminError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1.5">
+                  Senha de Acesso da Coordenação *:
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAdminPass ? 'text' : 'password'}
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      setAdminError('');
+                    }}
+                    placeholder="Digite a senha de administrador"
+                    className="w-full px-3.5 py-3 pr-10 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPass(!showAdminPass)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#7A6A5E] hover:text-[#2C241E]"
+                  >
+                    {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#8C7A6E] mt-1">
+                  Senha padrão da coordenação: <code className="bg-[#EBE4DA] px-1.5 py-0.5 rounded text-[#2C241E] font-mono">ollaria2026</code>
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F7F3EE] border border-[#E6DFD5] space-y-1 text-xs text-[#6B5A4D]">
                 <div className="flex items-center gap-2 text-sm font-bold text-[#2C241E]">
                   <Users className="w-4 h-4 text-[#D97736]" />
                   <span>{students.length} alunos matriculados atualmente</span>
                 </div>
-                <p className="leading-relaxed">
-                  Acesso livre e irrestrito para coordenação e professores do ateliê realizarem o acompanhamento diário.
+                <p className="leading-relaxed text-[11px]">
+                  Coordenação e professores: informe a chave mestra para acessar o sistema de gestão.
                 </p>
               </div>
 
               <button
                 id="btn-enter-admin-panel"
-                type="button"
-                onClick={handleAdminAccess}
+                type="submit"
                 className="w-full py-3.5 rounded-xl bg-[#2C241E] hover:bg-[#43372E] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-99"
               >
                 <ShieldCheck className="w-4 h-4 text-[#E6A15C]" />
                 <span>Entrar no Painel da Coordenação</span>
               </button>
-            </div>
+            </form>
           )}
         </div>
       </div>
@@ -245,9 +360,9 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto text-xs text-[#6B5A4D]">
         <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
           <Layers className="w-5 h-5 text-[#D97736] mb-2" />
-          <h4 className="font-serif font-bold text-sm text-[#2C241E] mb-1">Acesso Descomplicado</h4>
+          <h4 className="font-serif font-bold text-sm text-[#2C241E] mb-1">Acesso Protegido</h4>
           <p className="text-[#7A6A5E] leading-relaxed">
-            Consulte suas peças, avisos de fornadas, presenças e financeiro a qualquer momento sem necessidade de senhas.
+            Consulte suas peças, avisos de fornadas, presenças e financeiro com segurança utilizando seu PIN individual.
           </p>
         </div>
 

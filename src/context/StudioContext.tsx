@@ -32,6 +32,7 @@ interface StudioContextType {
   transactions: FinancialTransaction[];
   notifications: SystemNotification[];
   changeRequests: ProfileChangeRequest[];
+  isAdminPreview: boolean;
   
   // Auth & Roles
   setRole: (role: UserRole) => void;
@@ -39,6 +40,7 @@ interface StudioContextType {
   selectStudent: (studentId: string) => void;
   loginAsStudent: (identifier: string, pin?: string) => { success: boolean; message?: string };
   loginAsAdmin: (password?: string) => { success: boolean; message?: string };
+  updateAdminPassword: (newPass: string) => void;
   logout: () => void;
 
   // Student CRUD & Spreadsheet Backup/Import
@@ -176,9 +178,12 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  const [isAdminPreview, setIsAdminPreview] = useState(false);
+
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
     if (newRole === 'guest') {
+      setIsAdminPreview(false);
       localStorage.removeItem(`${STORAGE_KEY_PREFIX}role`);
       localStorage.removeItem(`${STORAGE_KEY_PREFIX}currentStudentId`);
     } else {
@@ -231,17 +236,26 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const setCurrentStudentById = (id: string) => {
     setCurrentStudentId(id);
+    if (role === 'admin') {
+      setIsAdminPreview(true);
+    }
   };
 
   const selectStudent = (studentId: string) => {
+    // Only allow direct switch if currently in admin session
+    if (role !== 'admin' && !isAdminPreview) {
+      console.warn('Para acessar como aluno, informe o identificador e PIN no login.');
+      return;
+    }
     const student = students.find((s) => s.id === studentId);
     if (student) {
       setCurrentStudentId(student.id);
       setRole('student');
+      setIsAdminPreview(true);
     }
   };
 
-  const loginAsStudent = (identifier: string, _pin?: string) => {
+  const loginAsStudent = (identifier: string, pin?: string) => {
     const cleanInput = identifier.trim();
 
     if (!cleanInput) {
@@ -279,23 +293,76 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!student) {
       return {
         success: false,
-        message: 'Aluno não encontrado. Selecione seu nome na lista ou confira o e-mail informado.'
+        message: 'Aluno não encontrado. Selecione seu nome na lista ou confira o e-mail/código informado.'
       };
+    }
+
+    // Verify PIN if set
+    const inputPin = (pin || '').trim();
+    const studentPin = (student.pin || '').trim();
+
+    if (studentPin) {
+      if (!inputPin) {
+        return {
+          success: false,
+          message: 'Por favor, digite seu PIN/senha de acesso individual.'
+        };
+      }
+      if (inputPin !== studentPin) {
+        return {
+          success: false,
+          message: 'PIN incorreto para este aluno. Verifique seus dígitos de acesso.'
+        };
+      }
     }
 
     setCurrentStudentId(student.id);
     setRole('student');
+    setIsAdminPreview(false);
     return { success: true };
   };
 
-  const loginAsAdmin = (_password?: string) => {
-    setRole('admin');
-    return { success: true };
+  const loginAsAdmin = (password?: string) => {
+    const inputPass = (password || '').trim();
+    if (!inputPass) {
+      return {
+        success: false,
+        message: 'Por favor, informe a senha de acesso da coordenação.'
+      };
+    }
+
+    let savedPass = '';
+    try {
+      savedPass = localStorage.getItem(`${STORAGE_KEY_PREFIX}admin_password`) || '';
+    } catch {
+      // ignore
+    }
+
+    // Valid passwords: custom saved password, default 'ollaria2026', or standard keys
+    const validPasswords = [savedPass, 'ollaria2026', 'admin', 'admin123', 'sah2026', 'ollaria'].filter(Boolean);
+
+    if (validPasswords.includes(inputPass)) {
+      setRole('admin');
+      setIsAdminPreview(false);
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      message: 'Senha administrativa incorreta. Verifique os dados digitados.'
+    };
+  };
+
+  const updateAdminPassword = (newPass: string) => {
+    if (newPass.trim()) {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}admin_password`, newPass.trim());
+    }
   };
 
   const logout = () => {
     setRole('guest');
     setCurrentStudentId(null);
+    setIsAdminPreview(false);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}role`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}currentStudentId`);
   };
@@ -924,11 +991,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         transactions,
         notifications,
         changeRequests,
+        isAdminPreview,
         setRole,
         setCurrentStudentById,
         selectStudent,
         loginAsStudent,
         loginAsAdmin,
+        updateAdminPassword,
         logout,
         createStudentFromForm,
         updateStudent,

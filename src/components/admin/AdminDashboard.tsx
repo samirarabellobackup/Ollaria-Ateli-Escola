@@ -130,7 +130,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
   const studentsToRenew = students.filter((s) => s.aulasRestantes <= 2 && s.status === 'ativo');
 
   const copyStudentAccessText = (student: typeof students[0]) => {
-    const text = `*OLLARIA ATELIÊ - ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de matrícula para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Sah Pereira | Ollaria Cerâmica - Brasília DF_`;
+    const text = `*OLLARIA ATELIÊ - ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de matrícula para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• Senha/PIN de Acesso: *${student.pin}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Sah Pereira | Ollaria Cerâmica - Brasília DF_`;
     navigator.clipboard.writeText(text);
     setCopiedKeyId(student.id);
     setTimeout(() => setCopiedKeyId(null), 2000);
@@ -581,9 +581,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
 
                       <td className="p-3.5">
                         <div className="space-y-0.5">
-                          <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3] inline-block">
-                            {st.accessCode}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3] inline-block">
+                              {st.accessCode}
+                            </span>
+                            <span className="font-mono text-[11px] text-[#5C4D41] bg-[#F5EFEB] px-1.5 py-0.5 rounded-md border border-[#E6DFD5] inline-block font-semibold" title="PIN de Acesso">
+                              PIN: {st.pin}
+                            </span>
+                          </div>
                           <span className="text-[11px] text-[#7A6A5E] block font-mono truncate max-w-[140px]">{st.email}</span>
                         </div>
                       </td>

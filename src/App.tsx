@@ -9,7 +9,7 @@ import { SecureAccessPortal } from './components/auth/SecureAccessPortal';
 import { Sparkles, Heart, Shield, Phone, MapPin, Layers, ArrowLeft } from 'lucide-react';
 
 const StudioAppContent: React.FC = () => {
-  const { role, currentStudent, setRole } = useStudio();
+  const { role, currentStudent, setRole, isAdminPreview } = useStudio();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
@@ -28,20 +28,22 @@ const StudioAppContent: React.FC = () => {
           <AdminDashboard onOpenRegistration={() => setIsRegistrationOpen(true)} />
         ) : role === 'student' && currentStudent ? (
           <div>
-            <div className="bg-[#2C241E] text-white px-4 py-2.5 text-xs">
-              <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <span className="text-[#E6DFD5]">
-                  Visualizando o portal de: <strong className="text-white">{currentStudent.registrationData.nomePreferencia || currentStudent.nome}</strong> ({currentStudent.accessCode})
-                </span>
-                <button
-                  onClick={() => setRole('admin')}
-                  className="inline-flex items-center gap-1.5 text-[#E6A15C] hover:text-white font-semibold underline transition-colors"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Voltar ao Painel do Ateliê
-                </button>
+            {isAdminPreview && (
+              <div className="bg-[#2C241E] text-white px-4 py-2.5 text-xs">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                  <span className="text-[#E6DFD5]">
+                    Modo Visualização (Coordenação): <strong className="text-white">{currentStudent.registrationData.nomePreferencia || currentStudent.nome}</strong> ({currentStudent.accessCode})
+                  </span>
+                  <button
+                    onClick={() => setRole('admin')}
+                    className="inline-flex items-center gap-1.5 text-[#E6A15C] hover:text-white font-semibold underline transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Voltar ao Painel da Coordenação
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
             <StudentPortal />
           </div>
         ) : (

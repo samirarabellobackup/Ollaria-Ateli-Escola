@@ -102,12 +102,12 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
 
   const handleCopyAccessList = () => {
     const lines = parsedStudents.map((st, idx) => {
-      return `${idx + 1}. *${st.registrationData?.nomePreferencia || st.nome}*\n   📧 E-mail: ${st.email}\n   🏷️ Matrícula: ${st.accessCode}\n   📅 Turma: ${st.turma}`;
+      return `${idx + 1}. *${st.registrationData?.nomePreferencia || st.nome}*\n   📧 E-mail: ${st.email}\n   🏷️ Matrícula: ${st.accessCode}\n   🔑 PIN: ${st.pin}\n   📅 Turma: ${st.turma}`;
     });
 
     const fullMessage = `🌿 *OLLARIA ATELIÊ — LISTA DE ALUNOS CADASTRADOS*\n\nPrezadas(os) alunas(os), seus cadastros no aplicativo oficial da Ollaria Ateliê estão disponíveis:\n\n${lines.join(
       '\n\n'
-    )}\n\n📌 *Como acessar:* Abra o aplicativo e selecione seu nome para acompanhar suas peças no forno, presenças e mensalidades.`;
+    )}\n\n📌 *Como acessar:* Abra o aplicativo e informe seu código/e-mail com seu PIN de acesso para acompanhar suas peças no forno, presenças e mensalidades.`;
 
     navigator.clipboard.writeText(fullMessage);
     setCopiedSummary(true);
@@ -302,6 +302,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                       <th className="p-3">Aluno</th>
                       <th className="p-3">E-mail</th>
                       <th className="p-3">Matrícula</th>
+                      <th className="p-3">PIN</th>
                       <th className="p-3">Turma</th>
                       <th className="p-3">Plano</th>
                     </tr>
@@ -313,6 +314,7 @@ export const ImportStudentsModal: React.FC<ImportStudentsModalProps> = ({
                         <td className="p-3 font-semibold text-[#2C241E]">{st.nome}</td>
                         <td className="p-3 text-[#5C4D41] font-mono text-[11px]">{st.email}</td>
                         <td className="p-3 font-mono text-[11px] text-[#D97736] font-bold">{st.accessCode}</td>
+                        <td className="p-3 font-mono text-[11px] text-[#2C241E] font-semibold">{st.pin}</td>
                         <td className="p-3 text-[#5C4D41] capitalize">{st.turma.replace('-', ' ')}</td>
                         <td className="p-3 text-[#5C4D41] capitalize">{st.modalidade}</td>
                       </tr>
