@@ -1,4 +1,17 @@
-import { Student, AttendanceRecord, PotteryPiece, FinancialTransaction, SystemNotification, ProfileChangeRequest } from '../types';
+import {
+  Student,
+  AttendanceRecord,
+  PotteryPiece,
+  FinancialTransaction,
+  SystemNotification,
+  ProfileChangeRequest,
+  ServiceType,
+  FiringOrder,
+  ConsultingAppointment,
+  CoworkingBooking,
+  MaterialUsage,
+  SystemAuditLog
+} from '../types';
 
 export const INITIAL_STUDENTS: Student[] = [
   {
@@ -20,6 +33,7 @@ export const INITIAL_STUDENTS: Student[] = [
     aulasRestantes: 6,
     trancamentosUtilizadosDias: 0,
     dataMatricula: '2026-08-01',
+    servicosAtivos: ['aluno_regular', 'cliente_queima'],
     registrationData: {
       email: 'beatriz.vasc@gmail.com',
       nomeCompleto: 'Beatriz Vasconcelos de Oliveira',
@@ -69,6 +83,7 @@ export const INITIAL_STUDENTS: Student[] = [
     aulasRestantes: 2,
     trancamentosUtilizadosDias: 0,
     dataMatricula: '2026-09-01',
+    servicosAtivos: ['aluno_regular'],
     registrationData: {
       email: 'rodrigo.albuquerque@uol.com.br',
       nomeCompleto: 'Rodrigo Albuquerque Mendonça',
@@ -118,6 +133,14 @@ export const INITIAL_STUDENTS: Student[] = [
     aulasRestantes: 6,
     trancamentosUtilizadosDias: 7,
     dataMatricula: '2026-05-08',
+    servicosAtivos: ['aluno_regular', 'cliente_consultoria'],
+    consultoriaData: {
+      horasContratadas: 8,
+      horasUtilizadas: 4,
+      horasAgendadas: 2,
+      valorHora: 150,
+      observacoes: 'Consultoria técnica para desenvolvimento de esmaltes de cone 6.'
+    },
     registrationData: {
       email: 'mariana.duarte@gmail.com',
       nomeCompleto: 'Mariana Duarte Silva',
@@ -167,6 +190,7 @@ export const INITIAL_STUDENTS: Student[] = [
     aulasRestantes: 3,
     trancamentosUtilizadosDias: 0,
     dataMatricula: '2026-07-28',
+    servicosAtivos: ['aluno_regular'],
     registrationData: {
       email: 'lucas.fontenele@hotmail.com',
       nomeCompleto: 'Lucas Fontenele de Carvalho',
@@ -194,6 +218,242 @@ export const INITIAL_STUDENTS: Student[] = [
       cienciaMateriaisQueimas: false,
       veracidadeInformacoes: false,
       autorizacaoImagem: 'nao_autorizo',
+      formaPagamentoPretendida: 'pix',
+    }
+  },
+  {
+    id: 'student-5',
+    accessCode: 'OL-5544',
+    pin: '5544',
+    nome: 'Maria Silva',
+    email: 'maria.silva@exemplo.com',
+    whatsapp: '61988887777',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    turma: 'quarta-tarde',
+    modalidade: 'mensal',
+    valorPlano: 460.00,
+    dataInicioPlano: '2026-09-01',
+    dataFimPlano: '2026-10-01',
+    status: 'ativo',
+    aulasTotaisPlano: 4,
+    aulasFeitas: 3,
+    aulasRestantes: 1,
+    trancamentosUtilizadosDias: 0,
+    dataMatricula: '2026-08-15',
+    // Exemplo do usuário multi-serviços do prompt: Aluna regular + Cliente queima + Cliente consultoria
+    servicosAtivos: ['aluno_regular', 'cliente_queima', 'cliente_consultoria'],
+    consultoriaData: {
+      horasContratadas: 10,
+      horasUtilizadas: 4,
+      horasAgendadas: 2,
+      valorHora: 160,
+      observacoes: 'Desenvolvimento e formulação de vidrados autorais e controle de atmosfera do forno.'
+    },
+    registrationData: {
+      email: 'maria.silva@exemplo.com',
+      nomeCompleto: 'Maria Eduarda Silva',
+      nomePreferencia: 'Maria',
+      dataNascimento: '1990-06-15',
+      cpfOuPassaporte: '412.339.810-72',
+      profissao: 'Ceramista e Designer',
+      telefoneWhatsapp: '(61) 98888-7777',
+      endereco: 'SQS 112 Bloco F, Asa Sul, Brasília - DF',
+      comoConheceu: 'Instagram',
+      modalidade: 'mensal',
+      turmaDesejada: 'quarta-tarde',
+      experiencia: 'intermediário',
+      jaFezAulasOutroAtelie: 'Sim',
+      menor18: 'Não',
+      contatoEmergenciaNome: 'Roberto Silva',
+      contatoEmergenciaRelacao: 'Cônjuge',
+      informacoesSaudeAtendimento: 'Sem restrições.',
+      aceitouRegrasCondicoes: true,
+      dataAceiteRegrasCondicoes: '2026-08-15T10:00:00Z',
+      aceitouTermoRegulamento: true,
+      dataAceiteTermoRegulamento: '2026-08-15T10:00:00Z',
+      cienciaProcessoCeramico: true,
+      cienciaMateriaisQueimas: true,
+      veracidadeInformacoes: true,
+      autorizacaoImagem: 'autorizo',
+      formaPagamentoPretendida: 'pix',
+    }
+  },
+  {
+    id: 'student-6',
+    accessCode: 'OL-8822',
+    pin: '8822',
+    nome: 'Camila Rocha',
+    email: 'camila.rocha@art.com',
+    whatsapp: '61991223344',
+    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    turma: 'sabado-manha',
+    modalidade: 'mensal',
+    valorPlano: 550.00,
+    dataInicioPlano: '2026-09-01',
+    dataFimPlano: '2026-10-01',
+    status: 'ativo',
+    aulasTotaisPlano: 0,
+    aulasFeitas: 0,
+    aulasRestantes: 0,
+    trancamentosUtilizadosDias: 0,
+    dataMatricula: '2026-09-01',
+    // Artista Coworking
+    servicosAtivos: ['artista_coworking'],
+    coworkingData: {
+      horasContratadas: 20,
+      horasUtilizadas: 8,
+      horasAgendadas: 4,
+      periodoContratado: 'Setembro / Outubro 2026',
+      observacoes: 'Uso de torno elétrico Shimpo e bancada de acabamento nas tardes de terça e quinta.'
+    },
+    registrationData: {
+      email: 'camila.rocha@art.com',
+      nomeCompleto: 'Camila Rocha Antunes',
+      nomePreferencia: 'Camila',
+      dataNascimento: '1987-03-21',
+      cpfOuPassaporte: '631.882.101-55',
+      profissao: 'Artista Visual',
+      telefoneWhatsapp: '(61) 99122-3344',
+      endereco: 'Vila Planalto, Brasília - DF',
+      comoConheceu: 'Indicação',
+      modalidade: 'mensal',
+      turmaDesejada: 'sabado-manha',
+      experiencia: 'avançado',
+      jaFezAulasOutroAtelie: 'Sim',
+      menor18: 'Não',
+      contatoEmergenciaNome: 'Marcelo Antunes',
+      contatoEmergenciaRelacao: 'Irmão',
+      informacoesSaudeAtendimento: 'Sem restrições.',
+      aceitouRegrasCondicoes: true,
+      dataAceiteRegrasCondicoes: '2026-09-01T14:00:00Z',
+      aceitouTermoRegulamento: true,
+      dataAceiteTermoRegulamento: '2026-09-01T14:00:00Z',
+      cienciaProcessoCeramico: true,
+      cienciaMateriaisQueimas: true,
+      veracidadeInformacoes: true,
+      autorizacaoImagem: 'autorizo',
+      formaPagamentoPretendida: 'pix',
+    }
+  },
+  {
+    id: 'student-7',
+    accessCode: 'OL-9911',
+    pin: '9911',
+    nome: 'Prof. Alexandre Castro',
+    email: 'alexandre.ceramica@gmail.com',
+    whatsapp: '61993445566',
+    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    turma: 'terca-noite',
+    modalidade: 'mensal',
+    valorPlano: 0,
+    dataInicioPlano: '2026-09-15',
+    dataFimPlano: '2026-11-15',
+    status: 'ativo',
+    aulasTotaisPlano: 0,
+    aulasFeitas: 0,
+    aulasRestantes: 0,
+    trancamentosUtilizadosDias: 0,
+    dataMatricula: '2026-09-10',
+    // Professor Visitante: modelo Percentual sobre turma
+    servicosAtivos: ['professor_visitante'],
+    professorData: {
+      tipoAcordo: 'percentual_turma',
+      nomeTurma: 'Módulo Intensivo: Escultura Cerâmica Figurativa',
+      quantidadeAlunos: 8,
+      valorTurma: 3680.00,
+      percentualAcordado: 40,
+      valorDevidoProfessor: 1472.00,
+      valorPagoProfessor: 736.00,
+      historicoAcordo: 'Acordo formalizado para turma de Outubro de 2026 com 4 encontros práticos.'
+    },
+    registrationData: {
+      email: 'alexandre.ceramica@gmail.com',
+      nomeCompleto: 'Alexandre Castro de Almeida',
+      nomePreferencia: 'Prof. Alexandre',
+      dataNascimento: '1975-11-09',
+      cpfOuPassaporte: '281.993.411-03',
+      profissao: 'Professor de Escultura & Mestre Ceramista',
+      telefoneWhatsapp: '(61) 99344-5566',
+      endereco: 'SHIN QI 03 Conjunto 05, Lago Norte, Brasília - DF',
+      comoConheceu: 'Indicação',
+      modalidade: 'mensal',
+      turmaDesejada: 'terca-noite',
+      experiencia: 'avançado',
+      jaFezAulasOutroAtelie: 'Sim',
+      menor18: 'Não',
+      contatoEmergenciaNome: 'Helena Castro',
+      contatoEmergenciaRelacao: 'Esposa',
+      informacoesSaudeAtendimento: 'Sem restrições.',
+      aceitouRegrasCondicoes: true,
+      dataAceiteRegrasCondicoes: '2026-09-10T09:00:00Z',
+      aceitouTermoRegulamento: true,
+      dataAceiteTermoRegulamento: '2026-09-10T09:00:00Z',
+      cienciaProcessoCeramico: true,
+      cienciaMateriaisQueimas: true,
+      veracidadeInformacoes: true,
+      autorizacaoImagem: 'autorizo',
+      formaPagamentoPretendida: 'pix',
+    }
+  },
+  {
+    id: 'student-8',
+    accessCode: 'OL-4433',
+    pin: '4433',
+    nome: 'Juliana Mendes',
+    email: 'juliana.mendes@gmail.com',
+    whatsapp: '61997788990',
+    avatarUrl: 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=150&auto=format&fit=crop&q=80',
+    turma: 'sabado-manha',
+    modalidade: 'bimestral',
+    valorPlano: 980.00,
+    dataInicioPlano: '2026-09-05',
+    dataFimPlano: '2026-10-31',
+    status: 'ativo',
+    aulasTotaisPlano: 8,
+    aulasFeitas: 5,
+    aulasRestantes: 3,
+    trancamentosUtilizadosDias: 0,
+    dataMatricula: '2026-08-25',
+    // Aluno Curso: ciclo INÍCIO -> DESENVOLVIMENTO -> CONCLUSÃO
+    servicosAtivos: ['aluno_curso'],
+    cursoData: {
+      nomeCurso: 'Curso de Imersão em Torno Elétrico e Formulação de Esmaltes',
+      dataInicio: '2026-09-05',
+      dataTermino: '2026-10-31',
+      quantidadeEncontros: 8,
+      encontrosRealizados: 5,
+      encontrosRestantes: 3,
+      statusCiclo: 'desenvolvimento',
+      calendarioDescricao: 'Encontros aos sábados das 09h30 às 13h00 (total de 28 horas práticas).',
+      materiaisInclusos: '15kg de argila creme c/ pintas, óxidos minerais, esmaltes e 2 queimas de forno elétrico.',
+      observacoes: 'Aluna com excelente aproveitamento na centragem e abertura de cilindros.'
+    },
+    registrationData: {
+      email: 'juliana.mendes@gmail.com',
+      nomeCompleto: 'Juliana Mendes Rezende',
+      nomePreferencia: 'Ju Mendes',
+      dataNascimento: '1993-08-19',
+      cpfOuPassaporte: '702.441.981-33',
+      profissao: 'Arquiteta de Interiores',
+      telefoneWhatsapp: '(61) 99778-8990',
+      endereco: 'Asa Norte CLN 408 Bloco C, Brasília - DF',
+      comoConheceu: 'Instagram',
+      modalidade: 'bimestral',
+      turmaDesejada: 'sabado-manha',
+      experiencia: 'iniciante',
+      jaFezAulasOutroAtelie: 'Não',
+      menor18: 'Não',
+      contatoEmergenciaNome: 'Fernando Rezende',
+      contatoEmergenciaRelacao: 'Irmão',
+      informacoesSaudeAtendimento: 'Sem restrições.',
+      aceitouRegrasCondicoes: true,
+      dataAceiteRegrasCondicoes: '2026-08-25T11:00:00Z',
+      aceitouTermoRegulamento: true,
+      dataAceiteTermoRegulamento: '2026-08-25T11:00:00Z',
+      cienciaProcessoCeramico: true,
+      cienciaMateriaisQueimas: true,
+      veracidadeInformacoes: true,
+      autorizacaoImagem: 'autorizo',
       formaPagamentoPretendida: 'pix',
     }
   }
@@ -549,5 +809,307 @@ export const INITIAL_CHANGE_REQUESTS: ProfileChangeRequest[] = [
     motivo: 'Mudança recente de apartamento.',
     status: 'pendente',
     dataSolicitacao: '2026-09-12T11:20:00Z'
+  },
+  {
+    id: 'req-2',
+    studentId: 'student-5',
+    studentName: 'Maria Silva',
+    campoAlterado: 'Telefone / WhatsApp',
+    valorAnterior: '(61) 98888-7777',
+    novoValor: '(61) 99123-0000',
+    motivo: 'Atualização de número corporativo.',
+    status: 'pendente',
+    dataSolicitacao: '2026-09-20T15:30:00Z'
+  }
+];
+
+export const INITIAL_FIRINGS: FiringOrder[] = [
+  {
+    id: 'fire-1',
+    userId: 'student-5', // Maria Silva
+    identificacao: 'Lote 01 - Pratos Orgânicos e Travessas',
+    tipoQueima: 'esmalte_alta',
+    temperatura: '1220°C',
+    quantidadePecas: 12,
+    pecasEntregues: 12,
+    status: 'em_queima',
+    observacoes: 'Esmaltação celadon com queima em atmosfera oxidante. Cuidados com a base das peças.',
+    dataEntrada: '2026-09-18',
+    dataPrevista: '2026-09-22',
+    valorQueima: 180.00,
+    valorPago: 180.00,
+    formaPagamento: 'pix',
+    createdAt: '2026-09-18T10:00:00Z'
+  },
+  {
+    id: 'fire-2',
+    userId: 'student-5', // Maria Silva
+    identificacao: 'Lote 02 - Vasos Solitários e Copos',
+    tipoQueima: 'biscoito_baixa',
+    temperatura: '980°C',
+    quantidadePecas: 8,
+    pecasEntregues: 8,
+    status: 'aguardando_queima',
+    observacoes: 'Peças em ponto de osso, secagem já completa em prateleira.',
+    dataEntrada: '2026-09-24',
+    dataPrevista: '2026-09-28',
+    valorQueima: 95.00,
+    valorPago: 0.00,
+    formaPagamento: 'pix',
+    createdAt: '2026-09-24T14:30:00Z'
+  },
+  {
+    id: 'fire-3',
+    userId: 'student-1', // Beatriz Vasconcelos
+    identificacao: 'Fornada Especial - Luminária Cerâmica',
+    tipoQueima: 'esmalte_alta',
+    temperatura: '1220°C',
+    quantidadePecas: 2,
+    pecasEntregues: 2,
+    status: 'queima_concluida',
+    observacoes: 'Queima de alta temperatura finalizada com sucesso. Aguardando retirada.',
+    dataEntrada: '2026-09-02',
+    dataPrevista: '2026-09-08',
+    dataRealizada: '2026-09-08',
+    valorQueima: 70.00,
+    valorPago: 70.00,
+    formaPagamento: 'pix',
+    createdAt: '2026-09-02T16:00:00Z'
+  }
+];
+
+export const INITIAL_CONSULTING_APPOINTMENTS: ConsultingAppointment[] = [
+  {
+    id: 'consult-1',
+    userId: 'student-5', // Maria Silva
+    data: '2026-09-10',
+    horario: '14:00 às 16:00',
+    duracaoHoras: 2,
+    temaObservacoes: 'Formulação de vidrados acetinados foscos a partir de cinzas vegetais.',
+    status: 'realizado',
+    createdAt: '2026-09-05T10:00:00Z'
+  },
+  {
+    id: 'consult-2',
+    userId: 'student-5', // Maria Silva
+    data: '2026-09-17',
+    horario: '14:00 às 16:00',
+    duracaoHoras: 2,
+    temaObservacoes: 'Ajuste de expansão térmica para evitar craquelado em argilas de alta.',
+    status: 'realizado',
+    createdAt: '2026-09-12T11:00:00Z'
+  },
+  {
+    id: 'consult-3',
+    userId: 'student-5', // Maria Silva
+    data: '2026-10-02',
+    horario: '15:00 às 17:00',
+    duracaoHoras: 2,
+    temaObservacoes: 'Programação de curvas de resfriamento lento no painel digital Novus do forno.',
+    status: 'agendado',
+    createdAt: '2026-09-22T09:30:00Z'
+  },
+  {
+    id: 'consult-4',
+    userId: 'student-3', // Mariana Duarte
+    data: '2026-09-15',
+    horario: '10:00 às 12:00',
+    duracaoHoras: 2,
+    temaObservacoes: 'Orientação técnica de conformação de alças e encaixes de tampas em potes.',
+    status: 'realizado',
+    createdAt: '2026-09-10T14:00:00Z'
+  }
+];
+
+export const INITIAL_COWORKING_BOOKINGS: CoworkingBooking[] = [
+  {
+    id: 'cowork-1',
+    userId: 'student-6', // Camila Rocha
+    data: '2026-09-16',
+    horario: '14:00 às 18:00',
+    horas: 4,
+    status: 'realizado',
+    observacoes: 'Uso de torno Shimpo nº 2 e bancada de modelagem.',
+    solicitadoEm: '2026-09-12T10:00:00Z',
+    decididoEm: '2026-09-12T11:00:00Z'
+  },
+  {
+    id: 'cowork-2',
+    userId: 'student-6', // Camila Rocha
+    data: '2026-09-23',
+    horario: '14:00 às 18:00',
+    horas: 4,
+    status: 'realizado',
+    observacoes: 'Retorno para tornear e rebaixar pés de tigelas.',
+    solicitadoEm: '2026-09-19T09:00:00Z',
+    decididoEm: '2026-09-19T10:30:00Z'
+  },
+  {
+    id: 'cowork-3',
+    userId: 'student-6', // Camila Rocha
+    data: '2026-10-01',
+    horario: '14:00 às 18:00',
+    horas: 4,
+    status: 'confirmado',
+    observacoes: 'Agendamento aprovado para acabamento de peças da exposição.',
+    solicitadoEm: '2026-09-25T14:00:00Z',
+    decididoEm: '2026-09-25T15:00:00Z'
+  }
+];
+
+export const INITIAL_MATERIALS: MaterialUsage[] = [
+  {
+    id: 'mat-1',
+    userId: 'student-5', // Maria Silva (Aluna regular / Queima / Consultoria)
+    userName: 'Maria Silva',
+    servicoRelacionado: 'aluno_regular',
+    material: 'Argila Tabaco com Chamote Fino',
+    quantidade: 2,
+    unidade: 'kg',
+    valorUnitario: 12.00,
+    valorTotal: 24.00, // 2 * 12
+    formaCompensacao: 'cobrar',
+    data: '2026-09-12',
+    observacoes: 'Utilizado na aula prática de modelagem de jarras.',
+    statusCobranca: 'pendente',
+    createdAt: '2026-09-12T16:00:00Z'
+  },
+  {
+    id: 'mat-2',
+    userId: 'student-5', // Maria Silva
+    userName: 'Maria Silva',
+    servicoRelacionado: 'cliente_consultoria',
+    material: 'Pigmento Mineral Óxido de Cobalto',
+    quantidade: 50,
+    unidade: 'g',
+    valorUnitario: 0.60,
+    valorTotal: 30.00, // 50 * 0.60
+    formaCompensacao: 'cobrar',
+    data: '2026-09-17',
+    observacoes: 'Amostras de teste de vidrados azuis para laboratório.',
+    statusCobranca: 'pago',
+    createdAt: '2026-09-17T15:00:00Z'
+  },
+  {
+    id: 'mat-3',
+    userId: 'student-5', // Maria Silva
+    userName: 'Maria Silva',
+    servicoRelacionado: 'cliente_queima',
+    material: 'Suporte de Queima Refratário (Tripé)',
+    quantidade: 3,
+    unidade: 'unidade',
+    valorUnitario: 8.00,
+    valorTotal: 24.00,
+    formaCompensacao: 'repor', // A Repor! Não entra no financeiro
+    data: '2026-09-18',
+    observacoes: 'Cliente trará 3 suportes equivalentes na próxima visita.',
+    statusCobranca: 'nao_aplicavel',
+    createdAt: '2026-09-18T10:30:00Z'
+  },
+  {
+    id: 'mat-4',
+    userId: 'student-1', // Beatriz Vasconcelos
+    userName: 'Beatriz Vasconcelos',
+    servicoRelacionado: 'aluno_regular',
+    material: 'Argila Terracota Nacional',
+    quantidade: 5,
+    unidade: 'kg',
+    valorUnitario: 9.60,
+    valorTotal: 48.00, // 5 * 9.60
+    formaCompensacao: 'cobrar',
+    data: '2026-09-10',
+    observacoes: 'Pão de argila para modelagem manual.',
+    statusCobranca: 'pendente',
+    createdAt: '2026-09-10T09:00:00Z'
+  },
+  {
+    id: 'mat-5',
+    userId: 'student-6', // Camila Rocha (Coworking)
+    userName: 'Camila Rocha',
+    servicoRelacionado: 'artista_coworking',
+    material: 'Esmalte Transparente Brilhante de Alta',
+    quantidade: 1,
+    unidade: 'litro',
+    valorUnitario: 45.00,
+    valorTotal: 45.00,
+    formaCompensacao: 'incluido', // Incluído no plano de coworking!
+    data: '2026-09-23',
+    observacoes: 'Esmaltação de lote de canecas - benefício do pacote mensal.',
+    statusCobranca: 'nao_aplicavel',
+    createdAt: '2026-09-23T15:30:00Z'
+  },
+  {
+    id: 'mat-6',
+    userId: 'student-8', // Juliana Mendes (Curso)
+    userName: 'Juliana Mendes',
+    servicoRelacionado: 'aluno_curso',
+    material: 'Argila Creme com Pintas',
+    quantidade: 15,
+    unidade: 'kg',
+    valorUnitario: 10.00,
+    valorTotal: 150.00,
+    formaCompensacao: 'incluido', // Incluído no curso!
+    data: '2026-09-05',
+    observacoes: 'Material didático de base incluído no valor da matrícula do curso.',
+    statusCobranca: 'nao_aplicavel',
+    createdAt: '2026-09-05T10:00:00Z'
+  }
+];
+
+export const INITIAL_AUDIT_LOGS: SystemAuditLog[] = [
+  {
+    id: 'audit-1',
+    userId: 'student-5',
+    userName: 'Maria Silva',
+    modulo: 'servico',
+    acao: 'Adição de Serviço',
+    infoAnterior: 'Aluno Regular',
+    novaInfo: 'Aluno Regular, Cliente Queima, Cliente Consultoria',
+    responsavel: 'Coordenação (Sah Pereira)',
+    data: '2026-09-01T09:30:00Z'
+  },
+  {
+    id: 'audit-2',
+    userId: 'student-5',
+    userName: 'Maria Silva',
+    modulo: 'horas',
+    acao: 'Contratação de Horas de Consultoria',
+    infoAnterior: '0h',
+    novaInfo: '10h contratadas (R$ 1.600,00)',
+    responsavel: 'Coordenação (Sah Pereira)',
+    data: '2026-09-01T10:00:00Z'
+  },
+  {
+    id: 'audit-3',
+    userId: 'student-5',
+    userName: 'Maria Silva',
+    modulo: 'queima',
+    acao: 'Entrada de Lote de Queima',
+    infoAnterior: 'Nenhuma',
+    novaInfo: 'Lote 01 - 12 peças a 1220°C (Em Queima)',
+    responsavel: 'Coordenação (Sah Pereira)',
+    data: '2026-09-18T10:00:00Z'
+  },
+  {
+    id: 'audit-4',
+    userId: 'student-5',
+    userName: 'Maria Silva',
+    modulo: 'material',
+    acao: 'Registro de Material com Cobrança',
+    infoAnterior: 'Nenhum',
+    novaInfo: 'Argila Tabaco 2kg — R$ 24,00 (Cobrar)',
+    responsavel: 'Coordenação (Sah Pereira)',
+    data: '2026-09-12T16:00:00Z'
+  },
+  {
+    id: 'audit-5',
+    userId: 'student-6',
+    userName: 'Camila Rocha',
+    modulo: 'agendamento',
+    acao: 'Confirmação de Horário Coworking',
+    infoAnterior: 'Solicitado (01/10/2026 14h-18h)',
+    novaInfo: 'Confirmado (01/10/2026 14h-18h - 4h)',
+    responsavel: 'Coordenação (Sah Pereira)',
+    data: '2026-09-25T15:00:00Z'
   }
 ];

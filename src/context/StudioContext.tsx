@@ -11,7 +11,14 @@ import {
   AttendanceStatus,
   PaymentMethod,
   MonthlyReportData,
-  UserRole
+  UserRole,
+  ServiceType,
+  FiringOrder,
+  FiringStatus,
+  ConsultingAppointment,
+  CoworkingBooking,
+  MaterialUsage,
+  SystemAuditLog
 } from '../types';
 import {
   INITIAL_STUDENTS,
@@ -19,7 +26,12 @@ import {
   INITIAL_ATTENDANCE,
   INITIAL_TRANSACTIONS,
   INITIAL_NOTIFICATIONS,
-  INITIAL_CHANGE_REQUESTS
+  INITIAL_CHANGE_REQUESTS,
+  INITIAL_FIRINGS,
+  INITIAL_CONSULTING_APPOINTMENTS,
+  INITIAL_COWORKING_BOOKINGS,
+  INITIAL_MATERIALS,
+  INITIAL_AUDIT_LOGS
 } from '../data/seedData';
 import { exportStudentsToCSV, exportFullBackupJSON as exportBackupJSONHelper } from '../utils/spreadsheet';
 
@@ -33,6 +45,31 @@ interface StudioContextType {
   notifications: SystemNotification[];
   changeRequests: ProfileChangeRequest[];
   isAdminPreview: boolean;
+
+  // NOVO MÓDULO: Serviços, Queimas, Horas, Materiais e Histórico
+  firings: FiringOrder[];
+  consultingAppointments: ConsultingAppointment[];
+  coworkingBookings: CoworkingBooking[];
+  materialsUsage: MaterialUsage[];
+  auditLogs: SystemAuditLog[];
+
+  toggleUserService: (userId: string, service: ServiceType) => void;
+  updateUserServicesData: (userId: string, updates: Partial<Student>) => void;
+  
+  addFiringOrder: (order: Omit<FiringOrder, 'id' | 'createdAt'>) => FiringOrder;
+  updateFiringOrderStatus: (orderId: string, status: FiringStatus, observacoes?: string) => void;
+  deleteFiringOrder: (orderId: string) => void;
+
+  addConsultingAppointment: (app: Omit<ConsultingAppointment, 'id' | 'createdAt'>) => ConsultingAppointment;
+  updateConsultingAppointmentStatus: (appId: string, status: 'agendado' | 'realizado' | 'cancelado') => void;
+
+  addCoworkingBooking: (booking: Omit<CoworkingBooking, 'id' | 'solicitadoEm'>) => CoworkingBooking;
+  updateCoworkingBookingStatus: (bookingId: string, status: 'solicitado' | 'confirmado' | 'realizado' | 'cancelado') => void;
+
+  registerMaterialUsage: (usage: Omit<MaterialUsage, 'id' | 'createdAt' | 'valorTotal'>) => MaterialUsage;
+  deleteMaterialUsage: (usageId: string) => void;
+
+  addAuditLog: (log: Omit<SystemAuditLog, 'id' | 'data'>) => void;
   
   // Auth & Roles
   setRole: (role: UserRole) => void;
@@ -157,6 +194,52 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  // NOVO MÓDULO: Queimas, Consultoria, Coworking, Materiais e Histórico
+  const [firings, setFirings] = useState<FiringOrder[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}firings`);
+      return saved ? JSON.parse(saved) : INITIAL_FIRINGS;
+    } catch {
+      return INITIAL_FIRINGS;
+    }
+  });
+
+  const [consultingAppointments, setConsultingAppointments] = useState<ConsultingAppointment[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}consulting`);
+      return saved ? JSON.parse(saved) : INITIAL_CONSULTING_APPOINTMENTS;
+    } catch {
+      return INITIAL_CONSULTING_APPOINTMENTS;
+    }
+  });
+
+  const [coworkingBookings, setCoworkingBookings] = useState<CoworkingBooking[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}coworking`);
+      return saved ? JSON.parse(saved) : INITIAL_COWORKING_BOOKINGS;
+    } catch {
+      return INITIAL_COWORKING_BOOKINGS;
+    }
+  });
+
+  const [materialsUsage, setMaterialsUsage] = useState<MaterialUsage[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}materials`);
+      return saved ? JSON.parse(saved) : INITIAL_MATERIALS;
+    } catch {
+      return INITIAL_MATERIALS;
+    }
+  });
+
+  const [auditLogs, setAuditLogs] = useState<SystemAuditLog[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}audit_logs`);
+      return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
+    } catch {
+      return INITIAL_AUDIT_LOGS;
+    }
+  });
+
   // Default to 'guest' when accessing the app URL unless an active session was already authenticated
   const [role, setRoleState] = useState<UserRole>(() => {
     try {
@@ -231,6 +314,26 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}changeRequests`, JSON.stringify(changeRequests));
   }, [changeRequests]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}firings`, JSON.stringify(firings));
+  }, [firings]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}consulting`, JSON.stringify(consultingAppointments));
+  }, [consultingAppointments]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}coworking`, JSON.stringify(coworkingBookings));
+  }, [coworkingBookings]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}materials`, JSON.stringify(materialsUsage));
+  }, [materialsUsage]);
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}audit_logs`, JSON.stringify(auditLogs));
+  }, [auditLogs]);
 
   const currentStudent = students.find((s) => s.id === currentStudentId) || null;
 
@@ -962,21 +1065,281 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  // NOVO MÓDULO: Funções Operacionais de Serviços, Queimas, Horas, Materiais e Histórico
+  const addAuditLog = (entry: Omit<SystemAuditLog, 'id' | 'data'>) => {
+    const newLog: SystemAuditLog = {
+      ...entry,
+      id: `audit-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      data: new Date().toISOString()
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  const toggleUserService = (userId: string, service: ServiceType) => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.id !== userId) return st;
+        const currentServices = st.servicosAtivos || ['aluno_regular'];
+        const hasService = currentServices.includes(service);
+        let updatedServices: ServiceType[];
+        if (hasService) {
+          if (currentServices.length === 1) return st;
+          updatedServices = currentServices.filter((s) => s !== service);
+        } else {
+          updatedServices = [...currentServices, service];
+        }
+
+        let extraUpdates: Partial<Student> = {};
+        if (!hasService) {
+          if (service === 'cliente_consultoria' && !st.consultoriaData) {
+            extraUpdates.consultoriaData = { horasContratadas: 10, horasUtilizadas: 0, horasAgendadas: 0, valorHora: 160 };
+          }
+          if (service === 'artista_coworking' && !st.coworkingData) {
+            extraUpdates.coworkingData = { horasContratadas: 20, horasUtilizadas: 0, horasAgendadas: 0, periodoContratado: 'Mês corrente' };
+          }
+          if (service === 'aluno_curso' && !st.cursoData) {
+            extraUpdates.cursoData = {
+              nomeCurso: 'Curso de Cerâmica',
+              dataInicio: new Date().toISOString().split('T')[0],
+              dataTermino: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              quantidadeEncontros: 8,
+              encontrosRealizados: 0,
+              encontrosRestantes: 8,
+              statusCiclo: 'inicio'
+            };
+          }
+          if (service === 'professor_visitante' && !st.professorData) {
+            extraUpdates.professorData = {
+              tipoAcordo: 'percentual_turma',
+              nomeTurma: 'Turma Convidada',
+              quantidadeAlunos: 6,
+              valorTurma: 2760,
+              percentualAcordado: 40,
+              valorDevidoProfessor: 1104,
+              valorPagoProfessor: 0
+            };
+          }
+        }
+
+        addAuditLog({
+          userId: st.id,
+          userName: st.nome,
+          modulo: 'servico',
+          acao: hasService ? 'Remoção de Serviço' : 'Adição de Serviço',
+          infoAnterior: currentServices.join(', '),
+          novaInfo: updatedServices.join(', '),
+          responsavel: 'Coordenação (Sah Pereira)'
+        });
+
+        return { ...st, ...extraUpdates, servicosAtivos: updatedServices };
+      })
+    );
+  };
+
+  const updateUserServicesData = (userId: string, updates: Partial<Student>) => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setStudents((prev) =>
+      prev.map((st) => (st.id === userId ? { ...st, ...updates } : st))
+    );
+    addAuditLog({
+      userId,
+      modulo: 'servico',
+      acao: 'Atualização de Dados do Serviço',
+      responsavel: 'Coordenação (Sah Pereira)'
+    });
+  };
+
+  const addFiringOrder = (orderData: Omit<FiringOrder, 'id' | 'createdAt'>): FiringOrder => {
+    if (role !== 'admin' && !isAdminPreview) throw new Error('Apenas coordenação');
+    const newOrder: FiringOrder = {
+      ...orderData,
+      id: `fire-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setFirings((prev) => [newOrder, ...prev]);
+
+    if (orderData.valorQueima > 0) {
+      addTransaction({
+        studentId: orderData.userId,
+        descricao: `Queima: ${orderData.identificacao} (${orderData.tipoQueima})`,
+        categoria: 'queima',
+        valor: orderData.valorQueima,
+        status: orderData.valorPago >= orderData.valorQueima ? 'pago' : 'pendente',
+        metodoPagamento: orderData.formaPagamento,
+        dataVencimento: orderData.dataPrevista || new Date().toISOString().split('T')[0]
+      });
+    }
+
+    addAuditLog({
+      userId: orderData.userId,
+      modulo: 'queima',
+      acao: 'Entrada de Lote de Queima',
+      novaInfo: `${orderData.identificacao} (${orderData.temperatura}, ${orderData.quantidadePecas} peças) - Status: ${orderData.status}`,
+      responsavel: 'Coordenação (Sah Pereira)'
+    });
+    return newOrder;
+  };
+
+  const updateFiringOrderStatus = (orderId: string, status: FiringStatus, observacoes?: string) => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setFirings((prev) =>
+      prev.map((f) => {
+        if (f.id !== orderId) return f;
+        const prevStatus = f.status;
+        const isFinished = status === 'queima_concluida' || status === 'aguardando_retirada' || status === 'retirada';
+        const updated = {
+          ...f,
+          status,
+          observacoes: observacoes !== undefined ? observacoes : f.observacoes,
+          dataRealizada: isFinished && !f.dataRealizada ? new Date().toISOString().split('T')[0] : f.dataRealizada
+        };
+        addAuditLog({
+          userId: f.userId,
+          modulo: 'queima',
+          acao: 'Mudança de Status de Queima',
+          infoAnterior: prevStatus,
+          novaInfo: status,
+          responsavel: 'Coordenação (Sah Pereira)'
+        });
+        if (status === 'queima_concluida' || status === 'aguardando_retirada') {
+          createNotification(
+            f.userId,
+            'retirada_peca',
+            `Queima Concluída: ${f.identificacao}`,
+            `Sua queima de ${f.quantidadePecas} peças (${f.temperatura}) está pronta para retirada no ateliê.`,
+            'media'
+          );
+        }
+        return updated;
+      })
+    );
+  };
+
+  const deleteFiringOrder = (orderId: string) => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setFirings((prev) => prev.filter((f) => f.id !== orderId));
+  };
+
+  const addConsultingAppointment = (appData: Omit<ConsultingAppointment, 'id' | 'createdAt'>): ConsultingAppointment => {
+    if (role !== 'admin' && !isAdminPreview) throw new Error('Apenas coordenação');
+    const newApp: ConsultingAppointment = {
+      ...appData,
+      id: `consult-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setConsultingAppointments((prev) => [newApp, ...prev]);
+
+    setStudents((prev) =>
+      prev.map((st) => {
+        if (st.id !== appData.userId || !st.consultoriaData) return st;
+        const data = st.consultoriaData;
+        const agendadas = appData.status === 'agendado' ? data.horasAgendadas + appData.duracaoHoras : data.horasAgendadas;
+        const utilizadas = appData.status === 'realizado' ? data.horasUtilizadas + appData.duracaoHoras : data.horasUtilizadas;
+        return { ...st, consultoriaData: { ...data, horasAgendadas: agendadas, horasUtilizadas: utilizadas } };
+      })
+    );
+
+    addAuditLog({
+      userId: appData.userId,
+      modulo: 'horas',
+      acao: 'Atendimento de Consultoria',
+      novaInfo: `${appData.data} às ${appData.horario} (${appData.duracaoHoras}h) - ${appData.temaObservacoes}`,
+      responsavel: 'Coordenação (Sah Pereira)'
+    });
+    return newApp;
+  };
+
+  const updateConsultingAppointmentStatus = (appId: string, status: 'agendado' | 'realizado' | 'cancelado') => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setConsultingAppointments((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, status } : a))
+    );
+  };
+
+  const addCoworkingBooking = (bookingData: Omit<CoworkingBooking, 'id' | 'solicitadoEm'>): CoworkingBooking => {
+    const newBooking: CoworkingBooking = {
+      ...bookingData,
+      id: `cowork-${Date.now()}`,
+      status: role === 'admin' ? bookingData.status : 'solicitado',
+      solicitadoEm: new Date().toISOString()
+    };
+    setCoworkingBookings((prev) => [newBooking, ...prev]);
+
+    addAuditLog({
+      userId: bookingData.userId,
+      modulo: 'agendamento',
+      acao: 'Agendamento Coworking',
+      novaInfo: `${bookingData.data} (${bookingData.horario}) - ${bookingData.horas}h`,
+      responsavel: role === 'admin' ? 'Coordenação (Sah Pereira)' : 'Artista Coworking'
+    });
+    return newBooking;
+  };
+
+  const updateCoworkingBookingStatus = (bookingId: string, status: 'solicitado' | 'confirmado' | 'realizado' | 'cancelado') => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setCoworkingBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status, decididoEm: new Date().toISOString() } : b))
+    );
+    addAuditLog({
+      modulo: 'agendamento',
+      acao: 'Status de Agendamento Coworking',
+      novaInfo: `Agendamento ${bookingId} marcado como ${status}`,
+      responsavel: 'Coordenação (Sah Pereira)'
+    });
+  };
+
+  const registerMaterialUsage = (usageData: Omit<MaterialUsage, 'id' | 'createdAt' | 'valorTotal'>): MaterialUsage => {
+    if (role !== 'admin' && !isAdminPreview) throw new Error('Apenas coordenação');
+    const valorTotal = Number((usageData.quantidade * usageData.valorUnitario).toFixed(2));
+    const newUsage: MaterialUsage = {
+      ...usageData,
+      valorTotal,
+      id: `mat-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setMaterialsUsage((prev) => [newUsage, ...prev]);
+
+    if (usageData.formaCompensacao === 'cobrar' && valorTotal > 0) {
+      addTransaction({
+        studentId: usageData.userId,
+        descricao: `Material: ${usageData.material} (${usageData.quantidade} ${usageData.unidade})`,
+        categoria: 'argila',
+        valor: valorTotal,
+        status: 'pendente',
+        dataVencimento: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      });
+    }
+
+    addAuditLog({
+      userId: usageData.userId,
+      userName: usageData.userName,
+      modulo: 'material',
+      acao: 'Registro de Material Utilizado',
+      novaInfo: `${usageData.material} (${usageData.quantidade} ${usageData.unidade}) - R$ ${valorTotal.toFixed(2)} [Forma: ${usageData.formaCompensacao}]`,
+      responsavel: 'Coordenação (Sah Pereira)'
+    });
+    return newUsage;
+  };
+
+  const deleteMaterialUsage = (usageId: string) => {
+    if (role !== 'admin' && !isAdminPreview) return;
+    setMaterialsUsage((prev) => prev.filter((m) => m.id !== usageId));
+  };
+
   const resetDatabase = () => {
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}students_v2`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}students`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}students_backup`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}pieces`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}attendance`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}transactions`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}notifications`);
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}changeRequests`);
+    localStorage.clear();
     setStudents(INITIAL_STUDENTS);
     setPieces(INITIAL_PIECES);
     setAttendance(INITIAL_ATTENDANCE);
     setTransactions(INITIAL_TRANSACTIONS);
     setNotifications(INITIAL_NOTIFICATIONS);
     setChangeRequests(INITIAL_CHANGE_REQUESTS);
+    setFirings(INITIAL_FIRINGS);
+    setConsultingAppointments(INITIAL_CONSULTING_APPOINTMENTS);
+    setCoworkingBookings(INITIAL_COWORKING_BOOKINGS);
+    setMaterialsUsage(INITIAL_MATERIALS);
+    setAuditLogs(INITIAL_AUDIT_LOGS);
     setCurrentStudentId('student-1');
   };
 
@@ -992,6 +1355,23 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         notifications,
         changeRequests,
         isAdminPreview,
+        firings,
+        consultingAppointments,
+        coworkingBookings,
+        materialsUsage,
+        auditLogs,
+        toggleUserService,
+        updateUserServicesData,
+        addFiringOrder,
+        updateFiringOrderStatus,
+        deleteFiringOrder,
+        addConsultingAppointment,
+        updateConsultingAppointmentStatus,
+        addCoworkingBooking,
+        updateCoworkingBookingStatus,
+        registerMaterialUsage,
+        deleteMaterialUsage,
+        addAuditLog,
         setRole,
         setCurrentStudentById,
         selectStudent,

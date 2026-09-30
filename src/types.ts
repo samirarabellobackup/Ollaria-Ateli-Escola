@@ -20,7 +20,7 @@ export type AttendanceStatus = 'presente' | 'falta' | 'reposicao' | 'trancado' |
 
 export type UserRole = 'admin' | 'student' | 'guest';
 
-export type PaymentCategory = 'mensalidade' | 'argila' | 'queima' | 'ferramentas' | 'outro';
+export type PaymentCategory = 'mensalidade' | 'argila' | 'queima' | 'ferramentas' | 'material' | 'servico' | 'consultoria' | 'coworking' | 'curso' | 'outro';
 export type PaymentStatus = 'pago' | 'pendente' | 'atrasado';
 export type PaymentMethod = 'pix' | 'cartao' | 'dinheiro';
 
@@ -67,6 +67,155 @@ export interface RegistrationFormData {
   formaPagamentoPretendida: 'pix' | 'cartao';
 }
 
+// Tipos de Serviços Contratados (Separar Perfil de Serviço)
+export type ServiceType =
+  | 'aluno_regular'
+  | 'aluno_curso'
+  | 'cliente_queima'
+  | 'cliente_consultoria'
+  | 'artista_coworking'
+  | 'professor_visitante';
+
+// Aluno Curso: ciclo INÍCIO -> DESENVOLVIMENTO -> CONCLUSÃO
+export interface CourseServiceData {
+  nomeCurso: string;
+  dataInicio: string;
+  dataTermino: string;
+  quantidadeEncontros: number;
+  encontrosRealizados: number;
+  encontrosRestantes: number;
+  statusCiclo: 'inicio' | 'desenvolvimento' | 'conclusao';
+  calendarioDescricao?: string;
+  materiaisInclusos?: string;
+  observacoes?: string;
+}
+
+// Cliente Queima: 9 estados regulamentares
+export type FiringStatus =
+  | 'aguardando_recebimento'
+  | 'recebida'
+  | 'aguardando_queima'
+  | 'agendada'
+  | 'em_queima'
+  | 'queima_concluida'
+  | 'aguardando_retirada'
+  | 'retirada'
+  | 'cancelada';
+
+export interface FiringOrder {
+  id: string;
+  userId: string;
+  identificacao: string; // Ex: "Lote 03 - Vasos Terracota"
+  tipoQueima: 'biscoito_baixa' | 'esmalte_alta' | 'lustre_terceira' | 'outro';
+  temperatura: string; // Ex: "1220°C" ou "980°C"
+  quantidadePecas: number;
+  pecasEntregues: number;
+  status: FiringStatus;
+  observacoes?: string;
+  dataEntrada: string;
+  dataPrevista?: string;
+  dataRealizada?: string;
+  valorQueima: number;
+  valorPago: number;
+  formaPagamento?: PaymentMethod;
+  createdAt: string;
+}
+
+// Cliente Consultoria: controle automático de horas
+export interface ConsultingAppointment {
+  id: string;
+  userId: string;
+  data: string;
+  horario: string;
+  duracaoHoras: number;
+  temaObservacoes: string;
+  status: 'agendado' | 'realizado' | 'cancelado';
+  createdAt: string;
+}
+
+export interface ConsultingServiceData {
+  horasContratadas: number;
+  horasUtilizadas: number;
+  horasAgendadas: number;
+  valorHora?: number;
+  observacoes?: string;
+}
+
+// Artista Coworking
+export interface CoworkingBooking {
+  id: string;
+  userId: string;
+  data: string;
+  horario: string; // Ex: "14:00 às 18:00"
+  horas: number;
+  status: 'solicitado' | 'confirmado' | 'realizado' | 'cancelado';
+  observacoes?: string;
+  solicitadoEm: string;
+  decididoEm?: string;
+}
+
+export interface CoworkingServiceData {
+  horasContratadas: number;
+  horasUtilizadas: number;
+  horasAgendadas: number;
+  periodoContratado: string; // Ex: "Outubro 2026"
+  observacoes?: string;
+}
+
+// Professor Visitante: Sublocação vs Percentual sobre turma
+export type VisitingTeacherAgreementType = 'sublocacao' | 'percentual_turma';
+
+export interface VisitingTeacherServiceData {
+  tipoAcordo: VisitingTeacherAgreementType;
+  // Sublocação
+  periodo?: string;
+  horasContratadas?: number;
+  horasUtilizadas?: number;
+  horasRestantes?: number;
+  valorSublocacao?: number;
+  // Percentual sobre turma
+  nomeTurma?: string;
+  quantidadeAlunos?: number;
+  valorTurma?: number;
+  percentualAcordado?: number; // Ex: 30 (%)
+  valorDevidoProfessor?: number;
+  valorPagoProfessor?: number;
+  historicoAcordo?: string;
+}
+
+// Módulo de Materiais Utilizados
+export type MaterialCompensationType = 'cobrar' | 'repor' | 'incluido';
+
+export interface MaterialUsage {
+  id: string;
+  userId: string;
+  userName?: string;
+  servicoRelacionado: ServiceType;
+  material: string; // Ex: "Argila Tabaco", "Esmalte Branco Acetinado", "Papel Refratário"
+  quantidade: number;
+  unidade: string; // Ex: "kg", "unidade", "g", "litro"
+  valorUnitario: number;
+  valorTotal: number; // quantidade * valorUnitario
+  formaCompensacao: MaterialCompensationType;
+  data: string;
+  observacoes?: string;
+  statusCobranca?: 'pendente' | 'pago' | 'nao_aplicavel';
+  createdAt: string;
+}
+
+// Histórico e Auditoria do Sistema
+export interface SystemAuditLog {
+  id: string;
+  userId?: string;
+  userName?: string;
+  modulo: 'servico' | 'queima' | 'horas' | 'material' | 'financeiro' | 'cadastro' | 'agendamento';
+  acao: string;
+  infoAnterior?: string;
+  novaInfo?: string;
+  responsavel: string;
+  data: string;
+}
+
 export interface Student {
   id: string;
   accessCode: string; // Ex: OL-4821 gerado pelo sistema
@@ -89,6 +238,13 @@ export interface Student {
   // Ficha de matrícula completa
   registrationData: RegistrationFormData;
   dataMatricula: string;
+
+  // NOVO MÓDULO: Perfis e Serviços Contratados (Separar Perfil de Serviço)
+  servicosAtivos?: ServiceType[];
+  cursoData?: CourseServiceData;
+  consultoriaData?: ConsultingServiceData;
+  coworkingData?: CoworkingServiceData;
+  professorData?: VisitingTeacherServiceData;
 }
 
 export interface AttendanceRecord {
