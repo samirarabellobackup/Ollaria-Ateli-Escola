@@ -23,7 +23,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
     currentStudent,
     logout,
     notifications,
-    changeRequests
+    changeRequests,
+    isServerSynced
   } = useStudio();
 
   const unreadCount = notifications.filter(
@@ -67,6 +68,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
                     {pendingApprovalsCount} pendência{pendingApprovalsCount > 1 ? 's' : ''}
                   </span>
                 )}
+                <span className="text-[10px] font-normal text-[#E6DFD5] border-l border-[#43372E] pl-2 hidden lg:inline">
+                  {isServerSynced ? '● Servidor Sincronizado' : '● Sincronizando...'}
+                </span>
               </div>
             ) : role === 'student' && currentStudent ? (
               <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FAF0E6] border border-[#F0D5C3] text-[#2C241E] text-xs font-semibold">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
 import { ClassShift, PlanType, RegistrationFormData, Student } from '../../types';
 import {
@@ -11,7 +11,8 @@ import {
   Calendar,
   Sparkles,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  PlusCircle
 } from 'lucide-react';
 
 interface AddStudentModalProps {
@@ -42,6 +43,34 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   const [createdStudent, setCreatedStudent] = useState<Student | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
+
+  const handleReset = () => {
+    setCreatedStudent(null);
+    setNomeCompleto('');
+    setNomePreferencia('');
+    setEmail('');
+    setTelefoneWhatsapp('');
+    setCpfOuPassaporte('');
+    setEndereco('Brasília - DF');
+    setProfissao('');
+    setDataNascimento('1995-01-01');
+    setTurmaDesejada('quarta-tarde');
+    setModalidade('trimestral');
+    setFormaPagamentoPretendida('pix');
+    setShowMoreFields(false);
+    setCopiedKey(false);
+  };
+
+  const handleResetAndClose = () => {
+    handleReset();
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      handleReset();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -89,19 +118,13 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     setTimeout(() => setCopiedKey(false), 2500);
   };
 
-  const handleResetAndClose = () => {
-    setCreatedStudent(null);
-    setNomeCompleto('');
-    setNomePreferencia('');
-    setEmail('');
-    setTelefoneWhatsapp('');
-    setCpfOuPassaporte('');
-    setCopiedKey(false);
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleResetAndClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+    >
       <div className="bg-[#FAF8F5] w-full max-w-lg rounded-2xl border border-[#E6DFD5] shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
@@ -171,6 +194,16 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               >
                 {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span>{copiedKey ? 'Copiado para a área de transferência!' : 'Copiar Acesso para WhatsApp'}</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-cadastrar-outro-aluno"
+                onClick={handleReset}
+                className="w-full py-2.5 rounded-xl bg-[#2C241E] text-white text-xs font-bold hover:bg-[#43372E] flex items-center justify-center gap-2 transition-all shadow-xs"
+              >
+                <PlusCircle className="w-4 h-4 text-[#E6A15C]" />
+                <span>Cadastrar Outro Aluno</span>
               </button>
 
               <button
@@ -351,7 +384,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onClose();
+                  handleResetAndClose();
                   onOpenFullWizard();
                 }}
                 className="text-xs text-[#7A6A5E] hover:text-[#2C241E] inline-flex items-center gap-1 underline"

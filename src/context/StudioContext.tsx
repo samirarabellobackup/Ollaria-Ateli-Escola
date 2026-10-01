@@ -45,6 +45,8 @@ interface StudioContextType {
   notifications: SystemNotification[];
   changeRequests: ProfileChangeRequest[];
   isAdminPreview: boolean;
+  isServerSynced: boolean;
+  lastSavedTime: string;
 
   // NOVO MÓDULO: Serviços, Queimas, Horas, Materiais e Histórico
   firings: FiringOrder[];
@@ -262,6 +264,87 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [isAdminPreview, setIsAdminPreview] = useState(false);
+  const [isServerSynced, setIsServerSynced] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string>(() => new Date().toLocaleTimeString('pt-BR'));
+
+  // Request persistent browser storage to avoid automatic eviction
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {
+        // ignore if browser disallows
+      });
+    }
+  }, []);
+
+  // Sync with Server Database on mount: loads all registrations stored on the server disk
+  useEffect(() => {
+    let isMounted = true;
+
+    fetch('/api/studio-data')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (!isMounted || !payload || !payload.success || !payload.data) return;
+        const serverData = payload.data;
+
+        if (Array.isArray(serverData.students) && serverData.students.length > 0) {
+          setStudents((localStudents) => {
+            // Merge server and local students so any student created locally is preserved
+            const serverMap = new Map<string, Student>();
+            serverData.students.forEach((st: Student) => serverMap.set(st.id, st));
+
+            // Include local students not yet on server
+            localStudents.forEach((localSt) => {
+              if (!serverMap.has(localSt.id)) {
+                serverMap.set(localSt.id, localSt);
+              }
+            });
+
+            return Array.from(serverMap.values());
+          });
+        }
+
+        if (Array.isArray(serverData.pieces) && serverData.pieces.length > 0) {
+          setPieces(serverData.pieces);
+        }
+        if (Array.isArray(serverData.attendance)) {
+          setAttendance(serverData.attendance);
+        }
+        if (Array.isArray(serverData.transactions)) {
+          setTransactions(serverData.transactions);
+        }
+        if (Array.isArray(serverData.notifications)) {
+          setNotifications(serverData.notifications);
+        }
+        if (Array.isArray(serverData.changeRequests)) {
+          setChangeRequests(serverData.changeRequests);
+        }
+        if (Array.isArray(serverData.firings)) {
+          setFirings(serverData.firings);
+        }
+        if (Array.isArray(serverData.consultingAppointments)) {
+          setConsultingAppointments(serverData.consultingAppointments);
+        }
+        if (Array.isArray(serverData.coworkingBookings)) {
+          setCoworkingBookings(serverData.coworkingBookings);
+        }
+        if (Array.isArray(serverData.materialsUsage)) {
+          setMaterialsUsage(serverData.materialsUsage);
+        }
+        if (Array.isArray(serverData.auditLogs)) {
+          setAuditLogs(serverData.auditLogs);
+        }
+
+        setIsServerSynced(true);
+        setLastSavedTime(new Date().toLocaleTimeString('pt-BR'));
+      })
+      .catch((err) => {
+        console.warn('[OLLARIA] Servidor local indisponível, usando armazenamento do navegador:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const setRole = (newRole: UserRole) => {
     setRoleState(newRole);
@@ -334,6 +417,52 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}audit_logs`, JSON.stringify(auditLogs));
   }, [auditLogs]);
+
+  // Synchronize state changes to Server File Database automatically with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetch('/api/studio-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          students,
+          pieces,
+          attendance,
+          transactions,
+          notifications,
+          changeRequests,
+          firings,
+          consultingAppointments,
+          coworkingBookings,
+          materialsUsage,
+          auditLogs
+        })
+      })
+        .then((res) => {
+          if (res.ok) {
+            setIsServerSynced(true);
+            setLastSavedTime(new Date().toLocaleTimeString('pt-BR'));
+          }
+        })
+        .catch(() => {
+          // ignore background sync network error
+        });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [
+    students,
+    pieces,
+    attendance,
+    transactions,
+    notifications,
+    changeRequests,
+    firings,
+    consultingAppointments,
+    coworkingBookings,
+    materialsUsage,
+    auditLogs
+  ]);
 
   const currentStudent = students.find((s) => s.id === currentStudentId) || null;
 
@@ -1065,6 +1194,110 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   };
 
+  const toggleUserService = (userId: string, service: ServiceType) => {
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id !== userId) return s;
+        const currentServices = s.servicosAtivos || ['aluno_regular'];
+        const exists = currentServices.includes(service);
+        const updated = exists ? currentServices.filter((x) => x !== service) : [...currentServices, service];
+        return { ...s, servicosAtivos: updated };
+      })
+    );
+  };
+
+  const updateUserServicesData = (userId: string, updates: Partial<Student>) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === userId ? { ...s, ...updates } : s))
+    );
+  };
+
+  const addFiringOrder = (order: Omit<FiringOrder, 'id' | 'createdAt'>): FiringOrder => {
+    const newOrder: FiringOrder = {
+      ...order,
+      id: `fire-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setFirings((prev) => [newOrder, ...prev]);
+    return newOrder;
+  };
+
+  const updateFiringOrderStatus = (orderId: string, status: FiringStatus, observacoes?: string) => {
+    setFirings((prev) =>
+      prev.map((f) => {
+        if (f.id !== orderId) return f;
+        const now = new Date().toISOString().split('T')[0];
+        return {
+          ...f,
+          status,
+          ...(status === 'queima_concluida' ? { dataRealizada: now } : {}),
+          ...(observacoes ? { observacoes: `${f.observacoes || ''} [${status}]: ${observacoes}`.trim() } : {})
+        };
+      })
+    );
+  };
+
+  const deleteFiringOrder = (orderId: string) => {
+    setFirings((prev) => prev.filter((f) => f.id !== orderId));
+  };
+
+  const addConsultingAppointment = (app: Omit<ConsultingAppointment, 'id' | 'createdAt'>): ConsultingAppointment => {
+    const newApp: ConsultingAppointment = {
+      ...app,
+      id: `consult-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setConsultingAppointments((prev) => [newApp, ...prev]);
+    return newApp;
+  };
+
+  const updateConsultingAppointmentStatus = (appId: string, status: 'agendado' | 'realizado' | 'cancelado') => {
+    setConsultingAppointments((prev) =>
+      prev.map((c) => (c.id === appId ? { ...c, status } : c))
+    );
+  };
+
+  const addCoworkingBooking = (booking: Omit<CoworkingBooking, 'id' | 'solicitadoEm'>): CoworkingBooking => {
+    const newBooking: CoworkingBooking = {
+      ...booking,
+      id: `cowork-${Date.now()}`,
+      solicitadoEm: new Date().toISOString()
+    };
+    setCoworkingBookings((prev) => [newBooking, ...prev]);
+    return newBooking;
+  };
+
+  const updateCoworkingBookingStatus = (bookingId: string, status: 'solicitado' | 'confirmado' | 'realizado' | 'cancelado') => {
+    setCoworkingBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status, decididoEm: new Date().toISOString() } : b))
+    );
+  };
+
+  const registerMaterialUsage = (usage: Omit<MaterialUsage, 'id' | 'createdAt' | 'valorTotal'>): MaterialUsage => {
+    const valorTotal = usage.quantidade * usage.valorUnitario;
+    const newUsage: MaterialUsage = {
+      ...usage,
+      id: `mat-${Date.now()}`,
+      valorTotal,
+      createdAt: new Date().toISOString()
+    };
+    setMaterialsUsage((prev) => [newUsage, ...prev]);
+    return newUsage;
+  };
+
+  const deleteMaterialUsage = (usageId: string) => {
+    setMaterialsUsage((prev) => prev.filter((m) => m.id !== usageId));
+  };
+
+  const addAuditLog = (log: Omit<SystemAuditLog, 'id' | 'data'>) => {
+    const newLog: SystemAuditLog = {
+      ...log,
+      id: `audit-${Date.now()}`,
+      data: new Date().toISOString()
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
   const resetDatabase = () => {
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}students_v2`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}students`);
@@ -1095,6 +1328,25 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         notifications,
         changeRequests,
         isAdminPreview,
+        isServerSynced,
+        lastSavedTime,
+        firings,
+        consultingAppointments,
+        coworkingBookings,
+        materialsUsage,
+        auditLogs,
+        toggleUserService,
+        updateUserServicesData,
+        addFiringOrder,
+        updateFiringOrderStatus,
+        deleteFiringOrder,
+        addConsultingAppointment,
+        updateConsultingAppointmentStatus,
+        addCoworkingBooking,
+        updateCoworkingBookingStatus,
+        registerMaterialUsage,
+        deleteMaterialUsage,
+        addAuditLog,
         setRole,
         setCurrentStudentById,
         selectStudent,

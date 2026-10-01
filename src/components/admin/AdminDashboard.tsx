@@ -64,7 +64,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
     markTransactionAsPaid,
     deleteTransaction,
     resolveProfileChange,
-    createNotification
+    createNotification,
+    isServerSynced,
+    lastSavedTime
   } = useStudio();
 
   const [activeAdminTab, setActiveAdminTab] = useState<
@@ -460,16 +462,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                 <Database className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="text-xs font-bold text-[#2C241E]">
-                    Base de Cadastros e Preservação de Dados
+                    Base de Cadastros e Preservação Permanente de Dados
                   </h4>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                     {students.length} alunos preservados
                   </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#FAF0E6] text-[#A84A1A] border border-[#F0D5C3]">
+                    {isServerSynced ? `● Sincronizado no Servidor (${lastSavedTime})` : '● Gravando no Servidor...'}
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#7A6A5E] mt-0.5 leading-relaxed">
-                  Os dados ficam guardados no seu navegador e não são perdidos ao atualizar. Se você precisar recadastrar, restaurar respostas ou levar para outro computador, use as opções de importação e exportação de planilha abaixo.
+                  Todos os cadastros, peças, cobranças e presenças são gravados permanentemente no servidor e espelhados no seu navegador. Suas informações nunca são perdidas ao atualizar a página ou fechar o aplicativo.
                 </p>
               </div>
             </div>
@@ -1393,11 +1398,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       />
 
       {/* Add Student Modal */}
-      <AddStudentModal
-        isOpen={isAddStudentOpen}
-        onClose={() => setIsAddStudentOpen(false)}
-        onOpenFullWizard={onOpenRegistration}
-      />
+      {isAddStudentOpen && (
+        <AddStudentModal
+          isOpen={isAddStudentOpen}
+          onClose={() => setIsAddStudentOpen(false)}
+          onOpenFullWizard={onOpenRegistration}
+        />
+      )}
 
       {/* Import Students Spreadsheet Modal */}
       <ImportStudentsModal

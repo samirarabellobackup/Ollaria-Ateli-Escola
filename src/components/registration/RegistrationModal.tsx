@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudio } from '../../context/StudioContext';
 import { RegistrationFormData, PlanType, ClassShift, ExperienceLevel, Student } from '../../types';
 import {
@@ -11,7 +11,9 @@ import {
   Copy,
   Check,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  UserPlus,
+  PlusCircle
 } from 'lucide-react';
 
 interface RegistrationModalProps {
@@ -20,49 +22,70 @@ interface RegistrationModalProps {
   onSuccess?: (student: Student) => void;
 }
 
+const INITIAL_FORM_DATA: RegistrationFormData = {
+  email: '',
+  nomeCompleto: '',
+  nomePreferencia: '',
+  dataNascimento: '',
+  cpfOuPassaporte: '',
+  profissao: '',
+  telefoneWhatsapp: '',
+  endereco: '',
+  comoConheceu: 'Instagram',
+  comoConheceuOutro: '',
+  modalidade: 'trimestral',
+  turmaDesejada: 'quarta-tarde',
+  experiencia: 'iniciante',
+  jaFezAulasOutroAtelie: 'Não',
+  historicoOutroAtelie: '',
+  menor18: 'Não',
+  responsavelNome: '',
+  responsavelCpf: '',
+  responsavelWhatsapp: '',
+  responsavelEmail: '',
+  responsavelParentesco: '',
+  contatoEmergenciaNome: '',
+  contatoEmergenciaRelacao: '',
+  informacoesSaudeAtendimento: 'Nenhuma observação',
+  aceitouRegrasCondicoes: false,
+  dataAceiteRegrasCondicoes: '',
+  aceitouTermoRegulamento: false,
+  dataAceiteTermoRegulamento: '',
+  cienciaProcessoCeramico: false,
+  cienciaMateriaisQueimas: false,
+  veracidadeInformacoes: false,
+  autorizacaoImagem: 'autorizo',
+  formaPagamentoPretendida: 'pix'
+};
+
 export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { createStudentFromForm, setCurrentStudentById, setRole } = useStudio();
   const [step, setStep] = useState<number>(1);
   const [createdStudent, setCreatedStudent] = useState<Student | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const [formData, setFormData] = useState<RegistrationFormData>({
-    email: '',
-    nomeCompleto: '',
-    nomePreferencia: '',
-    dataNascimento: '',
-    cpfOuPassaporte: '',
-    profissao: '',
-    telefoneWhatsapp: '',
-    endereco: '',
-    comoConheceu: 'Instagram',
-    comoConheceuOutro: '',
-    modalidade: 'trimestral',
-    turmaDesejada: 'quarta-tarde',
-    experiencia: 'iniciante',
-    jaFezAulasOutroAtelie: 'Não',
-    historicoOutroAtelie: '',
-    menor18: 'Não',
-    responsavelNome: '',
-    responsavelCpf: '',
-    responsavelWhatsapp: '',
-    responsavelEmail: '',
-    responsavelParentesco: '',
-    contatoEmergenciaNome: '',
-    contatoEmergenciaRelacao: '',
-    informacoesSaudeAtendimento: 'Nenhuma observação',
-    aceitouRegrasCondicoes: false,
-    dataAceiteRegrasCondicoes: '',
-    aceitouTermoRegulamento: false,
-    dataAceiteTermoRegulamento: '',
-    cienciaProcessoCeramico: false,
-    cienciaMateriaisQueimas: false,
-    veracidadeInformacoes: false,
-    autorizacaoImagem: 'autorizo',
-    formaPagamentoPretendida: 'pix'
-  });
-
+  const [formData, setFormData] = useState<RegistrationFormData>(INITIAL_FORM_DATA);
   const [validationError, setValidationError] = useState('');
+
+  const resetForm = () => {
+    setCreatedStudent(null);
+    setStep(1);
+    setCopiedKey(false);
+    setValidationError('');
+    setFormData(INITIAL_FORM_DATA);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  // Reset form whenever the modal is closed to ensure reopening starts fresh
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -135,13 +158,20 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
   const enterAsCreatedStudent = () => {
     if (!createdStudent) return;
-    setCurrentStudentById(createdStudent.id);
-    setRole('student');
+    const studentId = createdStudent.id;
+    resetForm();
     onClose();
+    setCurrentStudentById(studentId);
+    setRole('student');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2C241E]/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2C241E]/70 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
+    >
       <div className="bg-[#FAF8F5] border border-[#E6DFD5] w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
         
         {/* Header */}
@@ -161,7 +191,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-[#7A6A5E] hover:text-[#2C241E] p-1.5 rounded-lg hover:bg-[#E6DFD5] transition-colors"
           >
             <X className="w-5 h-5" />
@@ -225,16 +255,27 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
               </button>
             </div>
 
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
               <button
-                onClick={enterAsCreatedStudent}
-                className="px-6 py-2.5 bg-[#D97736] text-white font-semibold text-sm rounded-xl hover:bg-[#C26224] transition-colors shadow-xs"
+                type="button"
+                id="btn-nova-matricula-sucesso"
+                onClick={resetForm}
+                className="px-5 py-2.5 bg-[#2C241E] text-white font-bold text-xs sm:text-sm rounded-xl hover:bg-[#43372E] transition-all flex items-center justify-center gap-2 shadow-xs"
               >
-                Acessar Portal do Aluno Agora
+                <PlusCircle className="w-4 h-4 text-[#E6A15C]" />
+                Inserir Nova Matrícula
               </button>
               <button
-                onClick={onClose}
-                className="px-6 py-2.5 bg-[#EBE4DA] text-[#4A3E35] font-semibold text-sm rounded-xl hover:bg-[#DDD5C9] transition-colors"
+                type="button"
+                onClick={enterAsCreatedStudent}
+                className="px-5 py-2.5 bg-[#D97736] text-white font-semibold text-xs sm:text-sm rounded-xl hover:bg-[#C26224] transition-colors shadow-xs"
+              >
+                Acessar Portal do Aluno
+              </button>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-5 py-2.5 bg-[#EBE4DA] text-[#4A3E35] font-semibold text-xs sm:text-sm rounded-xl hover:bg-[#DDD5C9] transition-colors"
               >
                 Fechar
               </button>

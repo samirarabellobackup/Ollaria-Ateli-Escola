@@ -67,6 +67,48 @@ export interface RegistrationFormData {
   formaPagamentoPretendida: 'pix' | 'cartao';
 }
 
+export interface StudentConsultoriaData {
+  horasContratadas: number;
+  horasUtilizadas: number;
+  horasAgendadas: number;
+  valorHora: number;
+  observacoes?: string;
+}
+
+export interface StudentCoworkingData {
+  horasContratadas: number;
+  horasUtilizadas: number;
+  horasAgendadas: number;
+  periodoContratado?: string;
+  observacoes?: string;
+}
+
+export interface StudentProfessorData {
+  tipoAcordo: 'sublocacao_espaco' | 'percentual_turma';
+  nomeTurma?: string;
+  quantidadeAlunos?: number;
+  valorTurma?: number;
+  percentualAcordado?: number;
+  valorDevidoProfessor?: number;
+  valorPagoProfessor?: number;
+  historicoAcordo?: string;
+  valorMensalSublocacao?: number;
+  horarioSublocacao?: string;
+}
+
+export interface StudentCursoData {
+  nomeCurso: string;
+  dataInicio: string;
+  dataTermino: string;
+  quantidadeEncontros: number;
+  encontrosRealizados: number;
+  encontrosRestantes: number;
+  statusCiclo: 'inicio' | 'desenvolvimento' | 'conclusao';
+  calendarioDescricao?: string;
+  materiaisInclusos?: string;
+  observacoes?: string;
+}
+
 export interface Student {
   id: string;
   accessCode: string; // Ex: OL-4821 gerado pelo sistema
@@ -89,6 +131,17 @@ export interface Student {
   // Ficha de matrícula completa
   registrationData: RegistrationFormData;
   dataMatricula: string;
+  servicosAtivos?: ServiceType[];
+  horasConsultoriaContratadas?: number;
+  horasConsultoriaUtilizadas?: number;
+  coworkingHorasMensais?: number;
+  professorModalidade?: 'sublocacao' | 'porcentagem';
+  professorPercentualRepasse?: number;
+
+  consultoriaData?: StudentConsultoriaData;
+  coworkingData?: StudentCoworkingData;
+  professorData?: StudentProfessorData;
+  cursoData?: StudentCursoData;
 }
 
 export interface AttendanceRecord {
@@ -178,3 +231,92 @@ export interface MonthlyReportData {
   pecasRetiradas: number;
   pecasAlerta90Dias: number;
 }
+
+export type ServiceType =
+  | 'aluno_regular'
+  | 'cliente_queima'
+  | 'cliente_consultoria'
+  | 'artista_coworking'
+  | 'professor_visitante'
+  | 'aluno_curso';
+
+export type FiringStatus =
+  | 'solicitado'
+  | 'aguardando_queima'
+  | 'em_queima'
+  | 'queima_concluida'
+  | 'aguardando_retirada'
+  | 'retirado'
+  | 'cancelado';
+
+export interface FiringOrder {
+  id: string;
+  userId: string;
+  identificacao: string;
+  tipoQueima: 'biscoito_baixa' | 'esmalte_alta' | 'outro' | string;
+  temperatura?: string;
+  quantidadePecas: number;
+  pecasEntregues?: number;
+  status: FiringStatus;
+  observacoes?: string;
+  dataEntrada: string;
+  dataPrevista?: string;
+  dataRealizada?: string;
+  valorQueima: number;
+  valorPago: number;
+  formaPagamento?: PaymentMethod | string;
+  createdAt: string;
+}
+
+export interface ConsultingAppointment {
+  id: string;
+  userId: string;
+  data: string;
+  horario: string;
+  duracaoHoras: number;
+  temaObservacoes: string;
+  status: 'agendado' | 'realizado' | 'cancelado';
+  createdAt: string;
+}
+
+export interface CoworkingBooking {
+  id: string;
+  userId: string;
+  data: string;
+  horario: string;
+  horas: number;
+  status: 'solicitado' | 'confirmado' | 'realizado' | 'cancelado';
+  observacoes?: string;
+  solicitadoEm: string;
+  decididoEm?: string;
+}
+
+export interface MaterialUsage {
+  id: string;
+  userId: string;
+  userName: string;
+  servicoRelacionado: ServiceType | string;
+  material: string;
+  quantidade: number;
+  unidade: string;
+  valorUnitario: number;
+  valorTotal: number;
+  formaCompensacao: 'cobrar' | 'repor' | 'incluido';
+  data: string;
+  observacoes?: string;
+  statusCobranca: 'pendente' | 'pago' | 'nao_aplicavel';
+  createdAt: string;
+}
+
+export interface SystemAuditLog {
+  id: string;
+  userId?: string;
+  userName?: string;
+  modulo: string;
+  acao: string;
+  infoAnterior?: string;
+  novaInfo: string;
+  responsavel: string;
+  data: string;
+}
+
