@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenRegistration, onOpenLogin 
             ) : role === 'student' && currentStudent ? (
               <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FAF0E6] border border-[#F0D5C3] text-[#2C241E] text-xs font-semibold">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
-                <span>Aluno(a): <strong>{currentStudent.registrationData.nomePreferencia || currentStudent.nome}</strong></span>
+                <span>Membr@: <strong>{currentStudent.registrationData.nomePreferencia || currentStudent.nome}</strong></span>
                 <span className="text-[#7A6A5E] text-[11px]">({currentStudent.accessCode})</span>
               </div>
             ) : (

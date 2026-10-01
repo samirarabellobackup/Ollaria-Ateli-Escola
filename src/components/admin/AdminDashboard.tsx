@@ -27,13 +27,15 @@ import {
   Upload,
   Download,
   FileSpreadsheet,
-  Database
+  Database,
+  Layers
 } from 'lucide-react';
 import { MonthlyReportView } from './MonthlyReportView';
 import { EditStudentModal } from './EditStudentModal';
 import { AddStudentModal } from './AddStudentModal';
 import { ImportStudentsModal } from './ImportStudentsModal';
-import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift, Student } from '../../types';
+import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift, Student, MEMBERSHIP_DEFINITIONS, MembershipType } from '../../types';
+import { MemberUnifiedModal } from './MemberUnifiedModal';
 
 interface AdminDashboardProps {
   onOpenRegistration: () => void;
@@ -82,6 +84,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
+  const [selectedMemberForUnified, setSelectedMemberForUnified] = useState<Student | null>(null);
+  const [filterMembership, setFilterMembership] = useState<string>('todos');
 
   // New Piece Modal
   const [isAddPieceOpen, setIsAddPieceOpen] = useState(false);
@@ -197,7 +201,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.accessCode.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesShift = filterShift === 'todos' || s.turma === filterShift;
-    return matchesSearch && matchesShift;
+    const activeSrvs = s.servicosAtivos && s.servicosAtivos.length > 0 ? s.servicosAtivos : ['aluno_regular'];
+    const matchesMembership =
+      filterMembership === 'todos' ||
+      activeSrvs.includes(filterMembership as any) ||
+      (filterMembership === 'membro_queima' && activeSrvs.includes('cliente_queima' as any)) ||
+      (filterMembership === 'membro_consultoria' && activeSrvs.includes('cliente_consultoria' as any));
+    return matchesSearch && matchesShift && matchesMembership;
   });
 
   return (
@@ -252,7 +262,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
       <div className="flex border-b border-[#E0D7CC] gap-2 overflow-x-auto pb-px">
         {[
           { id: 'overview', label: 'Visão Geral', icon: TrendingUp },
-          { id: 'students', label: 'Alunos & Matrículas', icon: Users, badge: students.length },
+          { id: 'students', label: 'Membr@s Ollaria & Serviços', icon: Users, badge: students.length },
           { id: 'attendance', label: 'Presença & Aulas', icon: Calendar },
           { id: 'pieces', label: 'Peças & Fornos', icon: Flame, badge: piecesInKiln },
           { id: 'finance', label: 'Financeiro & Vendas', icon: CreditCard, badge: totalPendingFinance > 0 ? `R$ ${totalPendingFinance.toFixed(0)}` : undefined },
@@ -515,6 +525,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
             </div>
           </div>
 
+          {/* Membresia Category Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            <span className="text-xs font-bold text-[#7A6A5E] uppercase tracking-wider mr-1 shrink-0">
+              Membresias:
+            </span>
+            {[
+              { id: 'todos', label: `Todos (${students.length})` },
+              { id: 'aluno_regular', label: 'Aluno Regular' },
+              { id: 'aluno_curso', label: 'Aluno Curso' },
+              { id: 'membro_queima', label: 'Membro Queima' },
+              { id: 'membro_consultoria', label: 'Consultoria' },
+              { id: 'artista_coworking', label: 'Coworking' },
+              { id: 'artista_residente', label: 'Residente' },
+              { id: 'membro_pesquisador', label: 'Pesquisador' },
+              { id: 'professor_visitante', label: 'Prof. Visitante' }
+            ].map((p) => {
+              const isSelected = filterMembership === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setFilterMembership(p.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                    isSelected
+                      ? 'bg-[#2C241E] text-white shadow-xs'
+                      : 'bg-white border border-[#D5CBC0] text-[#6B5A4D] hover:bg-[#FAF8F5]'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Filter and search bar + Incluir Aluno */}
           <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
             <div className="relative flex-1">
@@ -545,10 +588,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                 id="btn-incluir-aluno-tab"
                 onClick={() => setIsAddStudentOpen(true)}
                 className="px-3.5 py-2 rounded-xl bg-[#2C241E] text-white text-xs font-bold hover:bg-[#43372E] flex items-center gap-1.5 transition-colors shadow-xs whitespace-nowrap"
-                title="Incluir novo aluno no ateliê"
+                title="Cadastrar novo Membr@ Ollaria"
               >
                 <UserPlus className="w-4 h-4 text-[#E6A15C]" />
-                <span>Incluir Aluno</span>
+                <span>Novo Membr@</span>
               </button>
             </div>
           </div>
@@ -559,94 +602,136 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
                   <tr>
-                    <th className="p-3.5">Aluno & Contato</th>
-                    <th className="p-3.5">Matrícula</th>
-                    <th className="p-3.5">Turma & Plano</th>
-                    <th className="p-3.5">Progresso Aulas</th>
+                    <th className="p-3.5">Membr@ Ollaria</th>
+                    <th className="p-3.5">Acesso & PIN</th>
+                    <th className="p-3.5">Membresia(s) Ollaria</th>
+                    <th className="p-3.5">Carga / Frequência</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EBE4DA]">
-                  {filteredStudents.map((st) => (
-                    <tr key={st.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={st.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                            alt={st.nome}
-                            className="w-10 h-10 rounded-xl object-cover border border-[#E6DFD5]"
-                          />
-                          <div>
-                            <strong className="text-[#2C241E] block font-serif text-sm">{st.nome}</strong>
-                            <span className="text-xs text-[#7A6A5E]">{st.whatsapp}</span>
-                          </div>
-                        </div>
-                      </td>
+                  {filteredStudents.map((st) => {
+                    const stActiveServices: MembershipType[] =
+                      st.servicosAtivos && st.servicosAtivos.length > 0
+                        ? st.servicosAtivos
+                        : ['aluno_regular'];
 
-                      <td className="p-3.5">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3] inline-block">
-                              {st.accessCode}
-                            </span>
-                            <span className="font-mono text-[11px] text-[#5C4D41] bg-[#F5EFEB] px-1.5 py-0.5 rounded-md border border-[#E6DFD5] inline-block font-semibold" title="PIN de Acesso">
-                              PIN: {st.pin}
-                            </span>
-                          </div>
-                          <span className="text-[11px] text-[#7A6A5E] block font-mono truncate max-w-[140px]">{st.email}</span>
-                        </div>
-                      </td>
-
-                      <td className="p-3.5">
-                        <span className="font-medium text-[#2C241E] block capitalize">{st.turma}</span>
-                        <span className="text-xs text-[#7A6A5E] capitalize">Plano {st.modalidade}</span>
-                      </td>
-
-                      <td className="p-3.5">
-                        <div className="w-32">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="font-semibold text-[#2C241E]">{st.aulasFeitas} / {st.aulasTotaisPlano}</span>
-                            <span className="text-[#7A6A5E]">{st.aulasRestantes} restam</span>
-                          </div>
-                          <div className="w-full bg-[#EBE4DA] h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className="bg-[#D97736] h-full"
-                              style={{ width: `${Math.min(100, (st.aulasFeitas / st.aulasTotaisPlano) * 100)}%` }}
+                    return (
+                      <tr key={st.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={st.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                              alt={st.nome}
+                              className="w-10 h-10 rounded-xl object-cover border border-[#E6DFD5]"
                             />
+                            <div>
+                              <strong className="text-[#2C241E] block font-serif text-sm">{st.nome}</strong>
+                              <span className="text-xs text-[#7A6A5E]">{st.whatsapp}</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="p-3.5">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          st.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {st.status}
-                        </span>
-                      </td>
+                        <td className="p-3.5">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono font-bold text-[#D97736] tracking-wider text-xs bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3] inline-block">
+                                {st.accessCode}
+                              </span>
+                              <span className="font-mono text-[11px] text-[#5C4D41] bg-[#F5EFEB] px-1.5 py-0.5 rounded-md border border-[#E6DFD5] inline-block font-semibold" title="PIN de Acesso">
+                                PIN: {st.pin}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-[#7A6A5E] block font-mono truncate max-w-[140px]">{st.email}</span>
+                          </div>
+                        </td>
 
-                      <td className="p-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Edit Student Profile */}
-                          <button
-                            id={`btn-edit-student-${st.id}`}
-                            onClick={() => setEditingStudent(st)}
-                            className="p-1.5 rounded-lg border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] hover:bg-[#EBE4DA] hover:text-[#D97736] transition-colors"
-                            title="Editar perfil completo do aluno"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
+                        <td className="p-3.5">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {stActiveServices.map((srv) => {
+                              const meta = MEMBERSHIP_DEFINITIONS[srv];
+                              return (
+                                <span
+                                  key={srv}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                    meta?.corBadge || 'bg-gray-100 text-gray-800 border-gray-200'
+                                  }`}
+                                >
+                                  {meta?.titulo || srv}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </td>
 
-                          {/* Delete Student */}
-                          <button
-                            id={`btn-delete-student-${st.id}`}
-                            onClick={() => setDeletingStudent(st)}
-                            className="p-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
-                            title="Excluir aluno do ateliê"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <td className="p-3.5">
+                          {stActiveServices.includes('aluno_regular') ? (
+                            <div className="w-32">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="font-semibold text-[#2C241E]">{st.aulasFeitas} / 4 no ciclo</span>
+                                <span className="text-[#7A6A5E] capitalize">{st.turma.split('-')[0]}</span>
+                              </div>
+                              <div className="w-full bg-[#EBE4DA] h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-[#D97736] h-full"
+                                  style={{ width: `${Math.min(100, (st.aulasFeitas / 4) * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-[#7A6A5E]">
+                              {stActiveServices.includes('membro_queima') || stActiveServices.includes('cliente_queima')
+                                ? 'Serviço de Forno'
+                                : stActiveServices.includes('membro_consultoria') || stActiveServices.includes('cliente_consultoria')
+                                ? 'Banco de Horas'
+                                : stActiveServices.includes('artista_coworking')
+                                ? 'Uso de Ateliê'
+                                : 'Contrato Ativo'}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="p-3.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            st.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {st.status}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* Ficha Unificada do Membr@ */}
+                            <button
+                              id={`btn-unified-member-${st.id}`}
+                              onClick={() => setSelectedMemberForUnified(st)}
+                              className="px-2.5 py-1.5 rounded-lg border border-[#D97736] bg-[#D97736]/10 text-[#D97736] hover:bg-[#D97736] hover:text-white transition-colors text-xs font-bold flex items-center gap-1 shadow-xs"
+                              title="Abrir Ficha do Membr@ (Serviços, Queimas, Horas, Materiais)"
+                            >
+                              <Layers className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Ficha</span>
+                            </button>
+
+                            {/* Edit Student Profile */}
+                            <button
+                              id={`btn-edit-student-${st.id}`}
+                              onClick={() => setEditingStudent(st)}
+                              className="p-1.5 rounded-lg border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] hover:bg-[#EBE4DA] hover:text-[#D97736] transition-colors"
+                              title="Editar cadastro básico"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+
+                            {/* Delete Student */}
+                            <button
+                              id={`btn-delete-student-${st.id}`}
+                              onClick={() => setDeletingStudent(st)}
+                              className="p-1.5 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+                              title="Excluir cadastro"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
 
                           {/* Copy WhatsApp Credentials */}
                           <button
@@ -672,7 +757,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>

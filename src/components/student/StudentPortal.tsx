@@ -23,10 +23,45 @@ import {
   ChevronRight,
   Plus,
   Lock,
-  FileText
+  FileText,
+  Briefcase,
+  GraduationCap,
+  BookOpen,
+  CalendarCheck,
+  UserCheck
 } from 'lucide-react';
-import { PieceStage } from '../../types';
+import { PieceStage, MembershipType, MEMBERSHIP_DEFINITIONS } from '../../types';
 import { StudentTermsModal } from '../terms/StudentTermsModal';
+
+type PortalTab =
+  | 'pecas'
+  | 'aulas'
+  | 'queimas'
+  | 'consultoria'
+  | 'coworking'
+  | 'curso'
+  | 'professor'
+  | 'financeiro'
+  | 'matricula'
+  | 'notificacoes';
+
+const FIRING_STATUS_CONFIG: Record<
+  string,
+  { label: string; badge: string; step: number }
+> = {
+  aguardando_recebimento: { label: 'Aguardando Recebimento', badge: 'bg-zinc-100 text-zinc-700 border-zinc-300', step: 1 },
+  recebida: { label: 'Recebida no Ateliê', badge: 'bg-blue-100 text-blue-800 border-blue-300', step: 2 },
+  aguardando_queima: { label: 'Aguardando Queima', badge: 'bg-amber-100 text-amber-800 border-amber-300', step: 3 },
+  agendada: { label: 'Agendada no Forno', badge: 'bg-purple-100 text-purple-800 border-purple-300', step: 4 },
+  em_queima: { label: 'Em Queima 🔥', badge: 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse', step: 5 },
+  queima_concluida: { label: 'Queima Concluída', badge: 'bg-teal-100 text-teal-800 border-teal-300', step: 6 },
+  aguardando_retirada: { label: 'Aguardando Retirada', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300', step: 7 },
+  retirada: { label: 'Retirada Concluída', badge: 'bg-green-100 text-green-900 border-green-300', step: 8 },
+  cancelada: { label: 'Cancelada', badge: 'bg-red-100 text-red-800 border-red-300', step: 0 },
+  solicitado: { label: 'Aguardando Recebimento', badge: 'bg-zinc-100 text-zinc-700 border-zinc-300', step: 1 },
+  retirado: { label: 'Retirada Concluída', badge: 'bg-green-100 text-green-900 border-green-300', step: 8 },
+  cancelado: { label: 'Cancelada', badge: 'bg-red-100 text-red-800 border-red-300', step: 0 }
+};
 
 export const StudentPortal: React.FC = () => {
   const {
@@ -38,12 +73,25 @@ export const StudentPortal: React.FC = () => {
     changeRequests,
     acceptStudentTerms,
     requestProfileChange,
-    markNotificationAsRead
+    markNotificationAsRead,
+    firings,
+    consultingAppointments,
+    coworkingBookings,
+    addCoworkingBooking,
+    materialsUsage
   } = useStudio();
 
-  const [activeTab, setActiveTab] = useState<'pecas' | 'aulas' | 'financeiro' | 'matricula' | 'notificacoes'>('pecas');
+  const [activeTab, setActiveTab] = useState<PortalTab>('pecas');
   const [copiedPix, setCopiedPix] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Booking modal state for Coworking
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [bookingShift, setBookingShift] = useState('14:00 às 18:00');
+  const [bookingHours, setBookingHours] = useState(4);
+  const [bookingNotes, setBookingNotes] = useState('Uso de bancada e torno elétrico Shimpo');
+  const [bookingFeedback, setBookingFeedback] = useState('');
 
   // Terms modal state
   const [isViewTermsOpen, setIsViewTermsOpen] = useState(false);
@@ -78,6 +126,33 @@ export const StudentPortal: React.FC = () => {
   const myTransactions = transactions.filter((t) => t.studentId === currentStudent.id);
   const myNotifications = notifications.filter((n) => n.studentId === currentStudent.id);
   const myChangeRequests = changeRequests.filter((r) => r.studentId === currentStudent.id);
+
+  // Multi-membership records for this student
+  const activeServices: MembershipType[] =
+    currentStudent.servicosAtivos && currentStudent.servicosAtivos.length > 0
+      ? currentStudent.servicosAtivos
+      : ['aluno_regular'];
+
+  const myFirings = firings.filter((f) => f.userId === currentStudent.id);
+  const myConsultings = consultingAppointments.filter((c) => c.userId === currentStudent.id);
+  const myBookings = coworkingBookings.filter((b) => b.userId === currentStudent.id);
+  const myMaterials = materialsUsage.filter((m) => m.userId === currentStudent.id);
+
+  // Consulting hours calculations (Horas contratadas - horas utilizadas = horas disponíveis)
+  const consultoriaContratadas = currentStudent.consultoriaData?.horasContratadas || currentStudent.horasConsultoriaContratadas || 0;
+  const consultoriaUtilizadas = currentStudent.consultoriaData?.horasUtilizadas || currentStudent.horasConsultoriaUtilizadas || 0;
+  const consultoriaAgendadas = currentStudent.consultoriaData?.horasAgendadas || 0;
+  const consultoriaDisponiveis = Math.max(0, consultoriaContratadas - consultoriaUtilizadas);
+
+  // Coworking hours calculations
+  const coworkingContratadas = currentStudent.coworkingData?.horasContratadas || currentStudent.coworkingHorasMensais || 0;
+  const coworkingUtilizadas = currentStudent.coworkingData?.horasUtilizadas || 0;
+  const coworkingAgendadas = currentStudent.coworkingData?.horasAgendadas || 0;
+  const coworkingDisponiveis = Math.max(0, coworkingContratadas - coworkingUtilizadas);
+
+  // Course & Professor details
+  const cursoInfo = currentStudent.cursoData;
+  const professorInfo = currentStudent.professorData;
 
   // Pieces split: to fire vs fired
   const piecesToFire = myPieces.filter((p) => p.etapa !== 'queimada_pronta' && p.etapa !== 'retirada_entregue');
@@ -119,6 +194,24 @@ export const StudentPortal: React.FC = () => {
       setEditNewValue('');
       setEditReason('');
     }, 1800);
+  };
+
+  const handleSendBookingRequest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentStudent) return;
+    addCoworkingBooking({
+      userId: currentStudent.id,
+      data: bookingDate,
+      horario: bookingShift,
+      horas: Number(bookingHours),
+      status: 'solicitado',
+      observacoes: bookingNotes
+    });
+    setBookingFeedback('Solicitação de horário enviada com sucesso! A administração da Ollaria avaliará a disponibilidade.');
+    setTimeout(() => {
+      setBookingFeedback('');
+      setIsBookingModalOpen(false);
+    }, 2000);
   };
 
   // Helper for 90-day countdown
@@ -189,13 +282,32 @@ export const StudentPortal: React.FC = () => {
                   {currentStudent.registrationData.nomePreferencia || currentStudent.nome}
                 </h1>
                 <span className="bg-[#FAF0E6] text-[#A84A1A] font-semibold text-xs px-2.5 py-1 rounded-lg border border-[#F0D5C3] uppercase tracking-wide">
-                  Plano {currentStudent.modalidade}
+                  Membr@ Ollaria
                 </span>
               </div>
 
-              <p className="text-xs sm:text-sm text-[#7A6A5E] mt-1 flex items-center gap-2">
-                <span>Turma: <strong>{currentStudent.turma === 'quarta-tarde' ? 'Quarta-feira (Tarde) 15h20 às 17h50' : currentStudent.turma === 'quarta-noite' ? 'Quarta-feira (Noite) 18h20 às 20h50' : 'Sábado (Manhã) 09h30 às 12h00'}</strong></span>
-              </p>
+              {/* Membresia Badges */}
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {activeServices.map((srv) => {
+                  const meta = MEMBERSHIP_DEFINITIONS[srv];
+                  return (
+                    <span
+                      key={srv}
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                        meta?.corBadge || 'bg-gray-100 text-gray-800 border-gray-200'
+                      }`}
+                    >
+                      {meta?.titulo || srv}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {activeServices.includes('aluno_regular') && (
+                <p className="text-xs sm:text-sm text-[#7A6A5E] mt-1.5 flex items-center gap-2">
+                  <span>Turma Regular: <strong>{currentStudent.turma === 'quarta-tarde' ? 'Quarta-feira (Tarde) 15h20 às 17h50' : currentStudent.turma === 'quarta-noite' ? 'Quarta-feira (Noite) 18h20 às 20h50' : 'Sábado (Manhã) 09h30 às 12h00'}</strong></span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -223,10 +335,10 @@ export const StudentPortal: React.FC = () => {
 
             <div className="text-left">
               <span className="text-[10px] uppercase font-bold text-[#7A6A5E] tracking-wider block">
-                Turma & Turno
+                Membresias Ativas
               </span>
-              <span className="font-semibold text-sm text-[#2C241E] capitalize">
-                {currentStudent.turma.replace('-', ' ')}
+              <span className="font-semibold text-sm text-[#2C241E]">
+                {activeServices.length} {activeServices.length === 1 ? 'modalidade' : 'modalidades'}
               </span>
             </div>
           </div>
@@ -236,57 +348,114 @@ export const StudentPortal: React.FC = () => {
         {/* 4 Summary Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 pt-6 border-t border-[#EBE4DA]">
           
-          {/* Aulas Feitas */}
+          {/* Card 1: Aulas / Membresias */}
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E6DFD5]">
             <div className="flex items-center justify-between text-[#7A6A5E] mb-1">
-              <span className="text-xs font-semibold">Aulas Feitas</span>
+              <span className="text-xs font-semibold">
+                {activeServices.includes('aluno_regular') ? 'Aulas Realizadas' : 'Membresias'}
+              </span>
               <CheckCircle2 className="w-4 h-4 text-[#D97736]" />
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold font-serif text-[#2C241E]">{currentStudent.aulasFeitas}</span>
-              <span className="text-xs text-[#7A6A5E]">/ {currentStudent.aulasTotaisPlano} contratadas</span>
-            </div>
-            <div className="w-full bg-[#EBE4DA] h-1.5 rounded-full mt-2 overflow-hidden">
-              <div
-                className="bg-[#D97736] h-full rounded-full"
-                style={{ width: `${Math.min(100, (currentStudent.aulasFeitas / currentStudent.aulasTotaisPlano) * 100)}%` }}
-              />
-            </div>
+            {activeServices.includes('aluno_regular') ? (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-[#2C241E]">{currentStudent.aulasFeitas}</span>
+                  <span className="text-xs text-[#7A6A5E]">/ {currentStudent.aulasTotaisPlano} contratadas</span>
+                </div>
+                <div className="w-full bg-[#EBE4DA] h-1.5 rounded-full mt-2 overflow-hidden">
+                  <div
+                    className="bg-[#D97736] h-full rounded-full"
+                    style={{ width: `${Math.min(100, (currentStudent.aulasFeitas / currentStudent.aulasTotaisPlano) * 100)}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-serif text-[#2C241E]">{activeServices.length}</span>
+                <span className="text-xs text-[#7A6A5E]">serviços contratados</span>
+              </div>
+            )}
           </div>
 
-          {/* Aulas a Fazer */}
+          {/* Card 2: Horas Disponíveis ou Aulas a Fazer */}
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E6DFD5]">
             <div className="flex items-center justify-between text-[#7A6A5E] mb-1">
-              <span className="text-xs font-semibold">Aulas a Fazer</span>
+              <span className="text-xs font-semibold">
+                {consultoriaContratadas > 0
+                  ? 'Saldo Consultoria'
+                  : coworkingContratadas > 0
+                  ? 'Saldo Coworking'
+                  : 'Aulas a Fazer'}
+              </span>
               <Clock className="w-4 h-4 text-[#D97736]" />
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold font-serif text-[#2C241E]">{currentStudent.aulasRestantes}</span>
-              <span className="text-xs text-[#7A6A5E]">aulas no plano</span>
-            </div>
-            <p className="text-[11px] text-[#7A6A5E] mt-2">
-              Validade até: <strong>{new Date(currentStudent.dataFimPlano).toLocaleDateString('pt-BR')}</strong>
-            </p>
+            {consultoriaContratadas > 0 ? (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-[#D97736]">{consultoriaDisponiveis}h</span>
+                  <span className="text-xs text-[#7A6A5E]">disponíveis</span>
+                </div>
+                <p className="text-[11px] text-[#7A6A5E] mt-1">
+                  {consultoriaUtilizadas}h usadas • {consultoriaAgendadas}h agendadas
+                </p>
+              </>
+            ) : coworkingContratadas > 0 ? (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-indigo-700">{coworkingDisponiveis}h</span>
+                  <span className="text-xs text-[#7A6A5E]">disponíveis</span>
+                </div>
+                <p className="text-[11px] text-[#7A6A5E] mt-1">
+                  {coworkingUtilizadas}h usadas • {coworkingAgendadas}h agendadas
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-[#2C241E]">{currentStudent.aulasRestantes}</span>
+                  <span className="text-xs text-[#7A6A5E]">aulas no plano</span>
+                </div>
+                <p className="text-[11px] text-[#7A6A5E] mt-2">
+                  Mensalidade Contínua
+                </p>
+              </>
+            )}
           </div>
 
-          {/* Peças Cerâmicas */}
+          {/* Card 3: Queimas / Peças */}
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E6DFD5]">
             <div className="flex items-center justify-between text-[#7A6A5E] mb-1">
-              <span className="text-xs font-semibold">Peças Prontas p/ Retirada</span>
+              <span className="text-xs font-semibold">
+                {myFirings.length > 0 ? 'Queimas no Forno' : 'Peças Prontas'}
+              </span>
               <Flame className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold font-serif text-[#2C241E]">
-                {piecesFired.filter((p) => p.etapa === 'queimada_pronta').length}
-              </span>
-              <span className="text-xs text-emerald-700 font-semibold">prontas no ateliê</span>
-            </div>
-            <p className="text-[11px] text-[#7A6A5E] mt-2">
-              {piecesToFire.length} em secagem/queima
-            </p>
+            {myFirings.length > 0 ? (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-[#2C241E]">{myFirings.length}</span>
+                  <span className="text-xs text-[#7A6A5E]">lotes registrados</span>
+                </div>
+                <p className="text-[11px] text-emerald-700 font-semibold mt-1">
+                  {myFirings.filter((f) => f.status === 'queima_concluida' || f.status === 'aguardando_retirada').length} prontos para retirada
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-bold font-serif text-[#2C241E]">
+                    {piecesFired.filter((p) => p.etapa === 'queimada_pronta').length}
+                  </span>
+                  <span className="text-xs text-emerald-700 font-semibold">prontas no ateliê</span>
+                </div>
+                <p className="text-[11px] text-[#7A6A5E] mt-2">
+                  {piecesToFire.length} em secagem/queima
+                </p>
+              </>
+            )}
           </div>
 
-          {/* Pendências / Financeiro */}
+          {/* Card 4: Financeiro */}
           <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-[#E6DFD5]">
             <div className="flex items-center justify-between text-[#7A6A5E] mb-1">
               <span className="text-xs font-semibold">Saldo Pendente</span>
@@ -309,18 +478,35 @@ export const StudentPortal: React.FC = () => {
       {/* Navigation Tabs */}
       <div className="flex border-b border-[#E0D7CC] gap-2 overflow-x-auto pb-px">
         {[
-          { id: 'pecas', label: 'Minhas Peças Cerâmicas', icon: Flame, badge: myPieces.length },
-          { id: 'aulas', label: 'Presença & Aulas', icon: Calendar, badge: `${currentStudent.aulasFeitas}/${currentStudent.aulasTotaisPlano}` },
-          { id: 'financeiro', label: 'Financeiro & Pagamentos', icon: CreditCard, badge: pendingAmount > 0 ? `R$ ${pendingAmount.toFixed(0)}` : undefined },
-          { id: 'matricula', label: 'Ficha de Matrícula & Termos', icon: FileCheck, badge: !hasAcceptedTerms ? 'Pendente' : undefined },
-          { id: 'notificacoes', label: 'Avisos & Lembretes', icon: Bell, badge: myNotifications.filter((n) => !n.lida).length || undefined }
+          { id: 'pecas' as PortalTab, label: 'Minhas Peças Cerâmicas', icon: Flame, badge: myPieces.length },
+          ...(activeServices.includes('aluno_regular')
+            ? [{ id: 'aulas' as PortalTab, label: 'Presença & Aulas', icon: Calendar, badge: `${currentStudent.aulasFeitas}/${currentStudent.aulasTotaisPlano}` }]
+            : []),
+          ...(activeServices.includes('membro_queima') || activeServices.includes('cliente_queima') || myFirings.length > 0
+            ? [{ id: 'queimas' as PortalTab, label: 'Queimas & Forno', icon: Flame, badge: myFirings.length }]
+            : []),
+          ...(activeServices.includes('membro_consultoria') || activeServices.includes('cliente_consultoria') || consultoriaContratadas > 0
+            ? [{ id: 'consultoria' as PortalTab, label: 'Consultoria & Horas', icon: Briefcase, badge: `${consultoriaDisponiveis}h disp.` }]
+            : []),
+          ...(activeServices.includes('artista_coworking') || coworkingContratadas > 0
+            ? [{ id: 'coworking' as PortalTab, label: 'Espaço Coworking', icon: Layers, badge: `${coworkingDisponiveis}h disp.` }]
+            : []),
+          ...(activeServices.includes('aluno_curso') || cursoInfo
+            ? [{ id: 'curso' as PortalTab, label: 'Curso & Ciclo', icon: GraduationCap, badge: cursoInfo?.statusCiclo || 'Curso' }]
+            : []),
+          ...(activeServices.includes('professor_visitante') || professorInfo
+            ? [{ id: 'professor' as PortalTab, label: 'Professor Visitante', icon: BookOpen }]
+            : []),
+          { id: 'financeiro' as PortalTab, label: 'Financeiro & Pagamentos', icon: CreditCard, badge: pendingAmount > 0 ? `R$ ${pendingAmount.toFixed(0)}` : undefined },
+          { id: 'matricula' as PortalTab, label: 'Ficha do Membr@ & Termos', icon: FileCheck, badge: !hasAcceptedTerms ? 'Pendente' : undefined },
+          { id: 'notificacoes' as PortalTab, label: 'Avisos & Lembretes', icon: Bell, badge: myNotifications.filter((n) => !n.lida).length || undefined }
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-xs sm:text-sm border-b-2 whitespace-nowrap transition-all ${
                 isActive
                   ? 'border-[#D97736] text-[#D97736] bg-[#FAF8F5]'
@@ -640,7 +826,608 @@ export const StudentPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: FINANCEIRO & PAGAMENTOS */}
+      {/* TAB CONTENT: QUEIMAS & FORNO */}
+      {activeTab === 'queimas' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Header & Regulation Notice */}
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-amber-100 text-amber-800 shrink-0 shadow-xs">
+                <Flame className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                  Acompanhamento de Queimas & Fornos Ollaria
+                </h3>
+                <p className="text-xs text-[#7A6A5E] mt-0.5 max-w-3xl">
+                  Acompanhe em tempo real as etapas de queima do seu acervo nos fornos elétricos do ateliê (biscoito em baixa temperatura e esmalte em alta temperatura a 1220°C).
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200 text-[11px] text-amber-900 font-medium">
+              🔒 <strong>Visualização Oficial:</strong> Somente a administração pode alterar status e financeiro.
+            </div>
+          </div>
+
+          {/* 9 Stages Legend */}
+          <div className="bg-white p-4 rounded-2xl border border-[#E6DFD5] shadow-xs">
+            <h4 className="text-xs font-bold text-[#4A3E35] mb-2 uppercase tracking-wider">
+              Ciclo de Estados das Queimas (9 Etapas do Ateliê):
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {[
+                { id: 'aguardando_recebimento', label: '1. Aguardando Recebimento' },
+                { id: 'recebida', label: '2. Recebida' },
+                { id: 'aguardando_queima', label: '3. Aguardando Queima' },
+                { id: 'agendada', label: '4. Agendada' },
+                { id: 'em_queima', label: '5. Em Queima' },
+                { id: 'queima_concluida', label: '6. Queima Concluída' },
+                { id: 'aguardando_retirada', label: '7. Aguardando Retirada' },
+                { id: 'retirada', label: '8. Retirada' },
+                { id: 'cancelada', label: 'Cancelada' }
+              ].map((stg) => {
+                return (
+                  <div
+                    key={stg.id}
+                    className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E6DFD5] flex items-center gap-2"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[#D97736]" />
+                    <span className="text-[11px] font-semibold text-[#4A3E35] truncate">
+                      {stg.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Firings List */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif font-bold text-base text-[#2C241E]">
+                Histórico de Lotes & Ordens de Queima ({myFirings.length})
+              </h3>
+              <span className="text-xs text-[#7A6A5E]">
+                Atualizado pela coordenação do ateliê
+              </span>
+            </div>
+
+            {myFirings.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-2xl border border-[#E6DFD5] text-[#7A6A5E] text-xs">
+                Nenhum lote de queima registrado para seu cadastro até o momento.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myFirings.map((f) => {
+                  const statusInfo = FIRING_STATUS_CONFIG[f.status] || {
+                    label: f.status,
+                    badge: 'bg-zinc-100 text-zinc-800 border-zinc-200',
+                    step: 1
+                  };
+                  const isPaid = f.valorPago >= f.valorQueima;
+                  const pendente = Math.max(0, f.valorQueima - f.valorPago);
+
+                  return (
+                    <div
+                      key={f.id}
+                      className="bg-white rounded-2xl border border-[#E6DFD5] p-5 shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div>
+                            <span className="font-mono text-xs font-bold text-[#D97736] bg-[#FAF0E6] px-2 py-0.5 rounded-md border border-[#F0D5C3]">
+                              {f.identificacao}
+                            </span>
+                            <h4 className="font-serif font-bold text-base text-[#2C241E] mt-1.5 capitalize">
+                              {f.tipoQueima.replace('_', ' ')} • {f.temperatura || '1220°C'}
+                            </h4>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusInfo.badge}`}>
+                            {statusInfo.label}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs text-[#6B5A4D] mt-3 bg-[#FAF8F5] p-3 rounded-xl border border-[#E6DFD5]">
+                          <div>
+                            <span className="text-[10px] text-[#7A6A5E] block uppercase">Peças no Lote:</span>
+                            <strong>{f.quantidadePecas} peças</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#7A6A5E] block uppercase">Peças Entregues:</span>
+                            <strong>{f.pecasEntregues ?? f.quantidadePecas} peças</strong>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#7A6A5E] block uppercase">Data Entrada:</span>
+                            <span>{new Date(f.dataEntrada).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#7A6A5E] block uppercase">Data Prevista:</span>
+                            <span>{f.dataPrevista ? new Date(f.dataPrevista).toLocaleDateString('pt-BR') : 'A definir'}</span>
+                          </div>
+                        </div>
+
+                        {f.observacoes && (
+                          <p className="text-xs text-[#5C4D41] bg-amber-50/50 p-2.5 rounded-xl border border-amber-100 mt-3">
+                            <strong>Obs:</strong> {f.observacoes}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Financial info for firing */}
+                      <div className="mt-4 pt-3 border-t border-[#EBE4DA] flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[10px] text-[#7A6A5E] block">Valor da Queima:</span>
+                          <strong className="text-sm font-bold text-[#2C241E]">R$ {f.valorQueima.toFixed(2)}</strong>
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {isPaid ? '✓ Quitado' : `Pendente: R$ ${pendente.toFixed(2)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB CONTENT: CONSULTORIA & BANCO DE HORAS */}
+      {activeTab === 'consultoria' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Header */}
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-orange-100 text-orange-800 shrink-0 shadow-xs">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                  Consultoria Cerâmica & Banco de Horas
+                </h3>
+                <p className="text-xs text-[#7A6A5E] mt-0.5">
+                  Acompanhamento de horas técnicas contratadas, agendamentos e histórico dos atendimentos com Sah Pereira.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 px-3.5 py-2 rounded-xl border border-orange-200 text-[11px] text-orange-950 font-medium">
+              🔒 Horas calculadas automaticamente: <strong>Contratadas − Utilizadas = Disponíveis</strong>
+            </div>
+          </div>
+
+          {/* 4 Metric Cards for Hours Control */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Contratadas</span>
+              <span className="text-3xl font-serif font-bold text-[#2C241E]">{consultoriaContratadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Total do pacote</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Utilizadas</span>
+              <span className="text-3xl font-serif font-bold text-[#8C3A16]">{consultoriaUtilizadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Atendimentos concluídos</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Agendadas</span>
+              <span className="text-3xl font-serif font-bold text-blue-800">{consultoriaAgendadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Próximos encontros</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs bg-gradient-to-br from-white to-[#FAF0E6]">
+              <span className="text-xs font-semibold text-[#D97736] block mb-1">Saldo Disponível</span>
+              <span className="text-3xl font-serif font-bold text-[#D97736]">{consultoriaDisponiveis}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Livre para agendamento</p>
+            </div>
+          </div>
+
+          {/* Appointments History */}
+          <div className="bg-white rounded-2xl border border-[#E6DFD5] overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-[#E6DFD5] flex items-center justify-between">
+              <h3 className="font-serif font-bold text-base text-[#2C241E]">
+                Histórico de Atendimentos de Consultoria ({myConsultings.length})
+              </h3>
+              <span className="text-xs text-[#7A6A5E]">
+                Datas, horários e pautas técnicas
+              </span>
+            </div>
+
+            {myConsultings.length === 0 ? (
+              <div className="p-8 text-center text-[#7A6A5E] text-xs">
+                Nenhum atendimento registrado no histórico até o momento.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
+                    <tr>
+                      <th className="p-3.5">Data & Horário</th>
+                      <th className="p-3.5">Duração</th>
+                      <th className="p-3.5">Pauta & Observações</th>
+                      <th className="p-3.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EBE4DA]">
+                    {myConsultings.map((c) => (
+                      <tr key={c.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                        <td className="p-3.5 font-semibold text-[#2C241E]">
+                          {new Date(c.data).toLocaleDateString('pt-BR')} • {c.horario}
+                        </td>
+                        <td className="p-3.5 font-bold text-[#D97736]">
+                          {c.duracaoHoras} hora{c.duracaoHoras > 1 ? 's' : ''}
+                        </td>
+                        <td className="p-3.5 text-[#5C4D41]">
+                          {c.temaObservacoes}
+                        </td>
+                        <td className="p-3.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            c.status === 'realizado' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {c.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB CONTENT: ARTISTA COWORKING & ATELIÊ */}
+      {activeTab === 'coworking' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Header */}
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-800 shrink-0 shadow-xs">
+                <Layers className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                  Artista Coworking • Uso do Ateliê
+                </h3>
+                <p className="text-xs text-[#7A6A5E] mt-0.5">
+                  Acesso livre a tornos elétricos Shimpo, bancadas e equipamentos cerâmicos.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsBookingModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-[#2C241E] text-white text-xs font-bold hover:bg-[#43372E] flex items-center gap-2 transition-all shadow-xs"
+            >
+              <Plus className="w-4 h-4 text-[#E6A15C]" />
+              <span>Solicitar Horário</span>
+            </button>
+          </div>
+
+          {/* 4 Metric Cards for Hours Control */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Contratadas</span>
+              <span className="text-3xl font-serif font-bold text-[#2C241E]">{coworkingContratadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Plano mensal de uso</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Utilizadas</span>
+              <span className="text-3xl font-serif font-bold text-[#8C3A16]">{coworkingUtilizadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Uso de bancadas registrado</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs">
+              <span className="text-xs font-semibold text-[#7A6A5E] block mb-1">Horas Agendadas</span>
+              <span className="text-3xl font-serif font-bold text-blue-800">{coworkingAgendadas}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Horários futuros reservados</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs bg-gradient-to-br from-white to-indigo-50/50">
+              <span className="text-xs font-semibold text-indigo-700 block mb-1">Saldo Disponível</span>
+              <span className="text-3xl font-serif font-bold text-indigo-700">{coworkingDisponiveis}h</span>
+              <p className="text-[11px] text-[#7A6A5E] mt-1">Disponíveis para reservar</p>
+            </div>
+          </div>
+
+          {/* Bookings Table */}
+          <div className="bg-white rounded-2xl border border-[#E6DFD5] overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-[#E6DFD5] flex items-center justify-between">
+              <h3 className="font-serif font-bold text-base text-[#2C241E]">
+                Agenda de Utilização do Espaço ({myBookings.length})
+              </h3>
+              <span className="text-xs text-[#7A6A5E]">
+                Horários passados e futuras reservas
+              </span>
+            </div>
+
+            {myBookings.length === 0 ? (
+              <div className="p-8 text-center text-[#7A6A5E] text-xs">
+                Nenhum agendamento de bancada registrado. Clique em "Solicitar Horário" para agendar.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
+                    <tr>
+                      <th className="p-3.5">Data & Horário</th>
+                      <th className="p-3.5">Carga Horária</th>
+                      <th className="p-3.5">Bancada / Equipamento</th>
+                      <th className="p-3.5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EBE4DA]">
+                    {myBookings.map((b) => (
+                      <tr key={b.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                        <td className="p-3.5 font-semibold text-[#2C241E]">
+                          {new Date(b.data).toLocaleDateString('pt-BR')} • {b.horario}
+                        </td>
+                        <td className="p-3.5 font-bold text-indigo-700">
+                          {b.horas} hora{b.horas > 1 ? 's' : ''}
+                        </td>
+                        <td className="p-3.5 text-[#5C4D41]">
+                          {b.observacoes || 'Bancada e torno elétrico'}
+                        </td>
+                        <td className="p-3.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            b.status === 'confirmado'
+                              ? 'bg-green-100 text-green-800'
+                              : b.status === 'solicitado'
+                              ? 'bg-amber-100 text-amber-800'
+                              : b.status === 'realizado'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {b.status === 'solicitado' ? 'Aguardando Confirmação' : b.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Materials Used in Coworking */}
+          <div className="bg-white rounded-2xl border border-[#E6DFD5] overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-[#E6DFD5] flex items-center justify-between">
+              <h3 className="font-serif font-bold text-base text-[#2C241E]">
+                Materiais e Insumos Utilizados no Ateliê ({myMaterials.length})
+              </h3>
+              <span className="text-xs text-[#7A6A5E]">
+                Argilas, esmaltes e queimas
+              </span>
+            </div>
+
+            {myMaterials.length === 0 ? (
+              <div className="p-8 text-center text-[#7A6A5E] text-xs">
+                Nenhum consumo adicional de materiais registrado.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
+                    <tr>
+                      <th className="p-3.5">Material</th>
+                      <th className="p-3.5">Quantidade</th>
+                      <th className="p-3.5">Compensação</th>
+                      <th className="p-3.5">Valor</th>
+                      <th className="p-3.5">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EBE4DA]">
+                    {myMaterials.map((m) => (
+                      <tr key={m.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
+                        <td className="p-3.5 font-semibold text-[#2C241E]">
+                          {m.material}
+                        </td>
+                        <td className="p-3.5 font-bold text-[#D97736]">
+                          {m.quantidade} {m.unidade}
+                        </td>
+                        <td className="p-3.5 capitalize text-[#6B5A4D]">
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                            m.formaCompensacao === 'cobrar'
+                              ? 'bg-amber-100 text-amber-800'
+                              : m.formaCompensacao === 'repor'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {m.formaCompensacao}
+                          </span>
+                        </td>
+                        <td className="p-3.5 font-bold text-[#2C241E]">
+                          R$ {m.valorTotal.toFixed(2)}
+                        </td>
+                        <td className="p-3.5 text-[#7A6A5E]">
+                          {new Date(m.data).toLocaleDateString('pt-BR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB CONTENT: ALUNO DE CURSO */}
+      {activeTab === 'curso' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-sky-100 text-sky-800 shrink-0 shadow-xs">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                  {cursoInfo?.nomeCurso || 'Curso de Cerâmica • Ollaria'}
+                </h3>
+                <p className="text-xs text-[#7A6A5E] mt-0.5">
+                  Curso com duração definida, ciclo pedagógico completo e encontros estruturados.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white px-4 py-2 rounded-xl border border-[#E6DFD5] text-xs font-semibold text-[#4A3E35]">
+              Período: {cursoInfo?.dataInicio ? new Date(cursoInfo.dataInicio).toLocaleDateString('pt-BR') : 'Início'} até {cursoInfo?.dataTermino ? new Date(cursoInfo.dataTermino).toLocaleDateString('pt-BR') : 'Término'}
+            </div>
+          </div>
+
+          {/* Visual Cycle Banner: INÍCIO -> DESENVOLVIMENTO -> CONCLUSÃO */}
+          <div className="bg-white p-6 rounded-2xl border border-[#E6DFD5] shadow-xs space-y-4">
+            <h4 className="text-xs font-bold text-[#4A3E35] uppercase tracking-wider">
+              Ciclo Oficial do Curso
+            </h4>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { id: 'inicio', title: '1. Início', desc: 'Apresentação, massas, segurança e primeiras formas' },
+                { id: 'desenvolvimento', title: '2. Desenvolvimento', desc: 'Aprofundamento técnico, acabamentos e esmaltação' },
+                { id: 'conclusao', title: '3. Conclusão', desc: 'Queima em alta temperatura e entrega do acervo' }
+              ].map((stage) => {
+                const isCurrent = (cursoInfo?.statusCiclo || 'desenvolvimento') === stage.id;
+                return (
+                  <div
+                    key={stage.id}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isCurrent
+                        ? 'border-[#D97736] bg-[#FAF0E6] shadow-xs'
+                        : 'border-[#E6DFD5] bg-[#FAF8F5]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <strong className={`font-serif text-sm ${isCurrent ? 'text-[#8C3A16]' : 'text-[#2C241E]'}`}>
+                        {stage.title}
+                      </strong>
+                      {isCurrent && (
+                        <span className="text-[10px] font-bold uppercase bg-[#D97736] text-white px-2 py-0.5 rounded-full">
+                          Etapa Atual
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#7A6A5E] mt-1 leading-relaxed">
+                      {stage.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Meetings Progress */}
+            <div className="pt-4 border-t border-[#EBE4DA]">
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-semibold text-[#2C241E]">
+                  Encontros Realizados: {cursoInfo?.encontrosRealizados || 6} de {cursoInfo?.quantidadeEncontros || 8}
+                </span>
+                <span className="text-[#7A6A5E]">
+                  {cursoInfo?.encontrosRestantes || 2} encontros restantes
+                </span>
+              </div>
+              <div className="w-full bg-[#EBE4DA] h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-[#D97736] h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      ((cursoInfo?.encontrosRealizados || 6) / (cursoInfo?.quantidadeEncontros || 8)) * 100
+                    )}%`
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Course Materials */}
+            {cursoInfo?.materiaisInclusos && (
+              <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E6DFD5] text-xs text-[#5C4D41]">
+                <strong>Materiais Inclusos no Curso:</strong> {cursoInfo.materiaisInclusos}
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* TAB CONTENT: PROFESSOR VISITANTE */}
+      {activeTab === 'professor' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] flex items-center gap-3.5">
+            <div className="p-3 rounded-2xl bg-purple-100 text-purple-800 shrink-0 shadow-xs">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-lg text-[#2C241E]">
+                Professor Visitante • Acordo & Turmas
+              </h3>
+              <p className="text-xs text-[#7A6A5E] mt-0.5">
+                Acordo de sublocação de espaço ou percentual de faturamento sobre turma ministrada na Ollaria.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-[#E6DFD5] shadow-xs space-y-4">
+            <h4 className="font-serif font-bold text-base text-[#2C241E]">
+              Detalhes do Modelo de Acordo
+            </h4>
+
+            {professorInfo?.tipoAcordo === 'sublocacao_espaco' ? (
+              <div className="space-y-3 text-xs">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                  Modelo: Sublocação de Espaço
+                </span>
+                <p className="text-[#6B5A4D]">
+                  Horário e período contratado: <strong>{professorInfo.horarioSublocacao || 'Sextas 14h às 18h'}</strong>
+                </p>
+                <p className="text-[#6B5A4D]">
+                  Valor Mensal da Sublocação: <strong>R$ {professorInfo.valorMensalSublocacao?.toFixed(2) || '800,00'}</strong>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                  Modelo: Percentual sobre Turma
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E6DFD5]">
+                  <div>
+                    <span className="text-[10px] text-[#7A6A5E] block uppercase">Turma:</span>
+                    <strong>{professorInfo?.nomeTurma || 'Workshop Torno Avançado'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#7A6A5E] block uppercase">Alunos:</span>
+                    <strong>{professorInfo?.quantidadeAlunos || 6} alunos</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#7A6A5E] block uppercase">Percentual:</span>
+                    <strong>{professorInfo?.percentualAcordado || 70}%</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#7A6A5E] block uppercase">Valor Devido:</span>
+                    <strong className="text-[#D97736]">R$ {professorInfo?.valorDevidoProfessor?.toFixed(2) || '2.100,00'}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
       {activeTab === 'financeiro' && (
         <div className="space-y-6">
           
@@ -1152,6 +1939,119 @@ export const StudentPortal: React.FC = () => {
                   className="px-5 py-2 rounded-xl bg-[#D97736] text-white font-bold text-xs hover:bg-[#C26224] transition-colors"
                 >
                   Enviar para Aprovação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Coworking Booking Request Modal */}
+      {isBookingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2C241E]/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-[#FAF8F5] border border-[#E6DFD5] w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-[#F2ECE3] px-6 py-4 border-b border-[#E0D7CC] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-indigo-700" />
+                <h3 className="font-serif font-bold text-base text-[#2C241E]">
+                  Solicitar Horário de Ateliê (Coworking)
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsBookingModalOpen(false)}
+                className="text-[#7A6A5E] hover:text-[#2C241E]"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSendBookingRequest} className="p-6 space-y-4 text-xs sm:text-sm">
+              <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-xl text-xs text-indigo-900">
+                <strong>Regra de Agendamento:</strong> Seu pedido ficará registrado com status <em>"Solicitado"</em> e será confirmado pela coordenação da Ollaria conforme a disponibilidade de bancadas e tornos elétricos.
+              </div>
+
+              {bookingFeedback && (
+                <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-xl flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{bookingFeedback}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                    Data Pretendida *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                    Horário de Turno *
+                  </label>
+                  <select
+                    value={bookingShift}
+                    onChange={(e) => setBookingShift(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E]"
+                  >
+                    <option value="09:00 às 13:00">Manhã (09:00 às 13:00 - 4h)</option>
+                    <option value="14:00 às 18:00">Tarde (14:00 às 18:00 - 4h)</option>
+                    <option value="18:30 às 21:30">Noite (18:30 às 21:30 - 3h)</option>
+                    <option value="09:00 às 17:00">Dia Completo (09:00 às 17:00 - 8h)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  Quantidade de Horas Reservadas *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  required
+                  value={bookingHours}
+                  onChange={(e) => setBookingHours(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E]"
+                />
+                <span className="text-[11px] text-[#7A6A5E] mt-0.5 block">
+                  Saldo de horas disponíveis para reserva: <strong>{coworkingDisponiveis}h</strong>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#4A3E35] mb-1">
+                  Equipamento / Observações:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Torno elétrico Shimpo, bancada de acabamento..."
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-[#E6DFD5] flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBookingModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D5CBC0] bg-white text-[#4A3E35] font-semibold text-xs"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-indigo-700 text-white font-bold text-xs hover:bg-indigo-800 transition-colors"
+                >
+                  Enviar Solicitação
                 </button>
               </div>
             </form>

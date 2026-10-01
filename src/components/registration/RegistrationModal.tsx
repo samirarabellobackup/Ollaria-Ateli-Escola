@@ -33,7 +33,7 @@ const INITIAL_FORM_DATA: RegistrationFormData = {
   endereco: '',
   comoConheceu: 'Instagram',
   comoConheceuOutro: '',
-  modalidade: 'trimestral',
+  modalidade: 'mensal',
   turmaDesejada: 'quarta-tarde',
   experiencia: 'iniciante',
   jaFezAulasOutroAtelie: 'Não',
@@ -487,41 +487,28 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
                   <div>
                     <label className="block text-xs font-bold text-[#4A3E35] mb-2">
-                      Qual modalidade de matrícula você deseja realizar? *
+                      Modalidade de Contratação – Aluno Regular *
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        { id: 'mensal', label: 'Mensal', valorCartao: 'R$ 506', valorPix: 'Pix R$ 460', aulas: '4 aulas / mês' },
-                        { id: 'bimestral', label: 'Bimestral', valorCartao: 'R$ 1.012', valorPix: 'Pix R$ 920', aulas: '8 aulas / 2 meses' },
-                        { id: 'trimestral', label: 'Trimestral', valorCartao: 'R$ 1.472,45', valorPix: 'Pix R$ 1.338,60', aulas: '12 aulas (1 trancamento até 15 dias)' },
-                        { id: 'semestral', label: 'Semestral', valorCartao: 'R$ 3.036', valorPix: 'Pix R$ 2.539,20', aulas: '24 aulas (1 trancamento até 30 dias)' }
-                      ].map((mod) => (
-                        <label
-                          key={mod.id}
-                          className={`p-3.5 rounded-xl border cursor-pointer block transition-all ${
-                            formData.modalidade === mod.id
-                              ? 'border-[#D97736] bg-[#D97736]/10 ring-1 ring-[#D97736]'
-                              : 'border-[#D5CBC0] bg-white hover:border-[#B5A89B]'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-[#2C241E]">{mod.label}</span>
-                            <span className="text-xs font-bold text-[#D97736] bg-[#D97736]/15 px-2 py-0.5 rounded-md">
-                              {mod.valorPix}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#6B5A4D] mt-1">{mod.valorCartao} no cartão</p>
-                          <p className="text-[11px] text-[#7A6A5E] italic mt-0.5">{mod.aulas}</p>
-                          <input
-                            type="radio"
-                            name="modalidade"
-                            value={mod.id}
-                            checked={formData.modalidade === mod.id}
-                            onChange={(e) => handleChange('modalidade', e.target.value as PlanType)}
-                            className="hidden"
-                          />
-                        </label>
-                      ))}
+                    <div className="p-4 rounded-xl border-2 border-[#D97736] bg-[#D97736]/10 space-y-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#2C241E] text-sm">Mensalidade Contínua</span>
+                          <span className="text-[10px] uppercase font-bold bg-[#D97736] text-white px-2 py-0.5 rounded-full">
+                            Membresia Contínua
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-[#D97736] bg-[#D97736]/20 px-2.5 py-1 rounded-lg">
+                          PIX R$ 460 / mês • Cartão R$ 506
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#6B5A4D] leading-relaxed">
+                        Aulas práticas recorrentes com 4 encontros ao mês (2h30 por aula). Sem exigência de data de término: sua membresia é contínua enquanto estiver ativa, com renovação e cobranças mensais automáticas.
+                      </p>
+                      <input
+                        type="hidden"
+                        name="modalidade"
+                        value="mensal"
+                      />
                     </div>
                   </div>
 

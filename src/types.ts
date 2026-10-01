@@ -109,6 +109,35 @@ export interface StudentCursoData {
   observacoes?: string;
 }
 
+export interface StudentResidenteData {
+  projeto: string;
+  dataInicio: string;
+  dataTermino: string;
+  condicoesResidencia?: string;
+  valorTotal?: number;
+  materiaisInclusos?: string;
+  observacoes?: string;
+}
+
+export interface StudentPesquisadorData {
+  projetoPesquisa: string;
+  dataInicio: string;
+  dataTermino?: string;
+  atividadesPrevistas?: string;
+  temCobranca: boolean;
+  valorContribuicao?: number;
+  observacoes?: string;
+}
+
+export interface StudentAulasPorHoraData {
+  horasContratadas: number;
+  valorPorHora: number;
+  valorTotal: number;
+  horasUtilizadas: number;
+  horasAgendadas: number;
+  observacoes?: string;
+}
+
 export interface Student {
   id: string;
   accessCode: string; // Ex: OL-4821 gerado pelo sistema
@@ -118,20 +147,24 @@ export interface Student {
   whatsapp: string;
   avatarUrl?: string;
   turma: ClassShift;
-  modalidade: PlanType;
+  modalidade: PlanType; // Aluno Regular: sempre 'mensal' contínuo
   valorPlano: number;
   dataInicioPlano: string;
-  dataFimPlano: string;
+  dataFimPlano?: string; // Não obrigatória para Aluno Regular contínuo!
   status: 'ativo' | 'trancado' | 'inadimplente' | 'finalizado';
   aulasTotaisPlano: number;
   aulasFeitas: number;
   aulasRestantes: number;
-  trancamentosUtilizadosDias: number; // Max 15 dias p/ trimestral, 30 dias p/ semestral
+  trancamentosUtilizadosDias: number;
   
   // Ficha de matrícula completa
   registrationData: RegistrationFormData;
   dataMatricula: string;
-  servicosAtivos?: ServiceType[];
+
+  // NOVO CONCEITO: MEMBR@ OLLARIA E MULTI-MEMBRESIAS
+  membresias?: MemberMembership[];
+  servicosAtivos?: MembershipType[];
+  
   horasConsultoriaContratadas?: number;
   horasConsultoriaUtilizadas?: number;
   coworkingHorasMensais?: number;
@@ -142,7 +175,12 @@ export interface Student {
   coworkingData?: StudentCoworkingData;
   professorData?: StudentProfessorData;
   cursoData?: StudentCursoData;
+  residenteData?: StudentResidenteData;
+  pesquisadorData?: StudentPesquisadorData;
+  aulasPorHoraData?: StudentAulasPorHoraData;
 }
+
+export type MembroOllaria = Student;
 
 export interface AttendanceRecord {
   id: string;
@@ -232,20 +270,49 @@ export interface MonthlyReportData {
   pecasAlerta90Dias: number;
 }
 
-export type ServiceType =
+export type MembershipType =
+  // FORMAÇÃO
   | 'aluno_regular'
-  | 'cliente_queima'
-  | 'cliente_consultoria'
-  | 'artista_coworking'
+  | 'aluno_curso'
   | 'professor_visitante'
-  | 'aluno_curso';
+  // SERVIÇOS
+  | 'membro_queima'
+  | 'membro_consultoria'
+  | 'cliente_queima' // alias compatibilidade
+  | 'cliente_consultoria' // alias compatibilidade
+  // PESQUISA E PRODUÇÃO
+  | 'membro_pesquisador'
+  | 'artista_residente'
+  | 'artista_coworking';
+
+export type ServiceType = MembershipType;
+
+export type MembershipCategory = 'formacao' | 'servicos' | 'pesquisa_producao';
+
+export type MembershipStatus = 'ativa' | 'inativa' | 'suspensa' | 'encerrada';
+
+export interface MemberMembership {
+  id: string;
+  tipo: MembershipType;
+  status: MembershipStatus;
+  dataInicio: string;
+  dataTermino?: string; // Obrigatória para Curso e Residência; NÃO exigida para Aluno Regular contínuo!
+  observacoes?: string;
+  modalidadeContratacao?: string; // 'mensal' | 'curso' | 'horas' | 'servico' | 'sublocacao' | 'percentual' | 'periodo'
+}
 
 export type FiringStatus =
-  | 'solicitado'
+  | 'aguardando_recebimento'
+  | 'recebida'
   | 'aguardando_queima'
+  | 'agendada'
   | 'em_queima'
   | 'queima_concluida'
   | 'aguardando_retirada'
+  | 'retirada'
+  | 'cancelada'
+  // compatibilidade com registros anteriores
+  | 'solicitado'
   | 'retirado'
   | 'cancelado';
 
@@ -319,4 +386,97 @@ export interface SystemAuditLog {
   responsavel: string;
   data: string;
 }
+
+export const MEMBERSHIP_DEFINITIONS: Record<
+  MembershipType,
+  {
+    titulo: string;
+    categoria: MembershipCategory;
+    categoriaLabel: string;
+    contratacaoPrincipal: string;
+    corBadge: string;
+    descricao: string;
+  }
+> = {
+  aluno_regular: {
+    titulo: 'Aluno Regular',
+    categoria: 'formacao',
+    categoriaLabel: 'Formação',
+    contratacaoPrincipal: 'Mensalidade Contínua',
+    corBadge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    descricao: 'Aulas recorrentes com cobrança mensal contínua, frequência e reposições.'
+  },
+  aluno_curso: {
+    titulo: 'Aluno de Curso',
+    categoria: 'formacao',
+    categoriaLabel: 'Formação',
+    contratacaoPrincipal: 'Curso com início e fim',
+    corBadge: 'bg-sky-100 text-sky-800 border-sky-200',
+    descricao: 'Curso fechado com ciclo Início -> Desenvolvimento -> Conclusão.'
+  },
+  professor_visitante: {
+    titulo: 'Professor Visitante',
+    categoria: 'formacao',
+    categoriaLabel: 'Formação',
+    contratacaoPrincipal: 'Sublocação ou Percentual',
+    corBadge: 'bg-purple-100 text-purple-800 border-purple-200',
+    descricao: 'Mestre visitante com modelo de sublocação de espaço ou percentual de turma.'
+  },
+  membro_queima: {
+    titulo: 'Membro de Queima',
+    categoria: 'servicos',
+    categoriaLabel: 'Serviços',
+    contratacaoPrincipal: 'Serviço por queima',
+    corBadge: 'bg-amber-100 text-amber-800 border-amber-200',
+    descricao: 'Utilização dos fornos cerâmicos com controle de 9 etapas de queima.'
+  },
+  cliente_queima: {
+    titulo: 'Membro de Queima',
+    categoria: 'servicos',
+    categoriaLabel: 'Serviços',
+    contratacaoPrincipal: 'Serviço por queima',
+    corBadge: 'bg-amber-100 text-amber-800 border-amber-200',
+    descricao: 'Utilização dos fornos cerâmicos com controle de 9 etapas de queima.'
+  },
+  membro_consultoria: {
+    titulo: 'Membro de Consultoria',
+    categoria: 'servicos',
+    categoriaLabel: 'Serviços',
+    contratacaoPrincipal: 'Contratação por Horas',
+    corBadge: 'bg-orange-100 text-orange-800 border-orange-200',
+    descricao: 'Atendimentos técnicos e consultorias com banco de horas contratadas e saldo.'
+  },
+  cliente_consultoria: {
+    titulo: 'Membro de Consultoria',
+    categoria: 'servicos',
+    categoriaLabel: 'Serviços',
+    contratacaoPrincipal: 'Contratação por Horas',
+    corBadge: 'bg-orange-100 text-orange-800 border-orange-200',
+    descricao: 'Atendimentos técnicos e consultorias com banco de horas contratadas e saldo.'
+  },
+  membro_pesquisador: {
+    titulo: 'Membro Pesquisador',
+    categoria: 'pesquisa_producao',
+    categoriaLabel: 'Pesquisa e Produção',
+    contratacaoPrincipal: 'Projeto / Período',
+    corBadge: 'bg-teal-100 text-teal-800 border-teal-200',
+    descricao: 'Pesquisa em cerâmica, testes de massas, queimas e materiais.'
+  },
+  artista_residente: {
+    titulo: 'Artista Residente',
+    categoria: 'pesquisa_producao',
+    categoriaLabel: 'Pesquisa e Produção',
+    contratacaoPrincipal: 'Período / Projeto definido',
+    corBadge: 'bg-rose-100 text-rose-800 border-rose-200',
+    descricao: 'Residência artística com duração previamente definida e produção de acervo.'
+  },
+  artista_coworking: {
+    titulo: 'Artista Coworking',
+    categoria: 'pesquisa_producao',
+    categoriaLabel: 'Pesquisa e Produção',
+    contratacaoPrincipal: 'Horas de uso do ateliê',
+    corBadge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    descricao: 'Uso de bancadas, tornos elétricos e infraestrutura com agendamento prévio.'
+  }
+};
 

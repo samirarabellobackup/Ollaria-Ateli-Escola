@@ -26,7 +26,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   onClose,
   onOpenFullWizard
 }) => {
-  const { createStudentFromForm } = useStudio();
+  const { createStudentFromForm, updateUserServicesData } = useStudio();
 
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [nomePreferencia, setNomePreferencia] = useState('');
@@ -34,7 +34,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
   const [telefoneWhatsapp, setTelefoneWhatsapp] = useState('');
   const [cpfOuPassaporte, setCpfOuPassaporte] = useState('');
   const [turmaDesejada, setTurmaDesejada] = useState<ClassShift>('quarta-tarde');
-  const [modalidade, setModalidade] = useState<PlanType>('trimestral');
+  const [modalidade, setModalidade] = useState<PlanType>('mensal');
+  const [selectedMembresias, setSelectedMembresias] = useState<string[]>(['aluno_regular']);
   const [formaPagamentoPretendida, setFormaPagamentoPretendida] = useState<'pix' | 'cartao'>('pix');
   const [showMoreFields, setShowMoreFields] = useState(false);
   const [endereco, setEndereco] = useState('Brasília - DF');
@@ -55,7 +56,8 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     setProfissao('');
     setDataNascimento('1995-01-01');
     setTurmaDesejada('quarta-tarde');
-    setModalidade('trimestral');
+    setModalidade('mensal');
+    setSelectedMembresias(['aluno_regular']);
     setFormaPagamentoPretendida('pix');
     setShowMoreFields(false);
     setCopiedKey(false);
@@ -107,6 +109,19 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
     };
 
     const newStudent = createStudentFromForm(formData);
+    if (selectedMembresias && selectedMembresias.length > 0) {
+      updateUserServicesData(newStudent.id, {
+        servicosAtivos: selectedMembresias as any,
+        membresias: selectedMembresias.map((tipo, idx) => ({
+          id: `mem-${Date.now()}-${idx}`,
+          tipo: tipo as any,
+          status: 'ativa',
+          dataInicio: new Date().toISOString().split('T')[0],
+          modalidadeContratacao: tipo === 'aluno_regular' ? 'mensal' : 'servico'
+        }))
+      });
+      newStudent.servicosAtivos = selectedMembresias as any;
+    }
     setCreatedStudent(newStudent);
   };
 
@@ -289,37 +304,166 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#EBE4DA]">
-              <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  Turma
-                </label>
-                <select
-                  value={turmaDesejada}
-                  onChange={(e) => setTurmaDesejada(e.target.value as ClassShift)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E] font-medium"
-                >
-                  <option value="quarta-tarde">Quarta Tarde (15h20 às 17h50)</option>
-                  <option value="quarta-noite">Quarta Noite (18h20 às 20h50)</option>
-                  <option value="sabado-manha">Sábado Manhã (09h30 às 12h00)</option>
-                  <option value="terca-noite">Terça Noite (18h20 às 20h50)</option>
-                </select>
+            <div className="pt-2 border-t border-[#EBE4DA] space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
+                    Turma de Aulas Regulares
+                  </label>
+                  <select
+                    value={turmaDesejada}
+                    onChange={(e) => setTurmaDesejada(e.target.value as ClassShift)}
+                    className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E] font-medium"
+                  >
+                    <option value="quarta-tarde">Quarta Tarde (15h20 às 17h50)</option>
+                    <option value="quarta-noite">Quarta Noite (18h20 às 20h50)</option>
+                    <option value="sabado-manha">Sábado Manhã (09h30 às 12h00)</option>
+                    <option value="terca-noite">Terça Noite (18h20 às 20h50)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
+                    Contratação Aluno Regular
+                  </label>
+                  <div className="px-3 py-2 rounded-xl border border-[#D97736] bg-[#D97736]/10 text-xs font-bold text-[#2C241E] flex items-center justify-between">
+                    <span>Mensalidade Contínua</span>
+                    <span className="text-[10px] text-[#D97736] bg-[#D97736]/15 px-2 py-0.5 rounded-md">
+                      R$ 460/mês
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                  Modalidade do Plano
-                </label>
-                <select
-                  value={modalidade}
-                  onChange={(e) => setModalidade(e.target.value as PlanType)}
-                  className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs text-[#2C241E] font-medium"
-                >
-                  <option value="mensal">Mensal (4 aulas)</option>
-                  <option value="bimestral">Bimestral (8 aulas)</option>
-                  <option value="trimestral">Trimestral (12 aulas)</option>
-                  <option value="semestral">Semestral (24 aulas)</option>
-                </select>
+              {/* Membresias Ollaria Iniciais */}
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-xs font-bold text-[#2C241E] mb-0.5">
+                    Tipo(s) de Membr@ Ollaria:
+                  </label>
+                  <p className="text-[11px] text-[#7A6A5E]">
+                    Uma pessoa pode possuir múltiplas membresias no mesmo login e cadastro. Selecione uma ou mais categorias:
+                  </p>
+                </div>
+
+                {/* Categorias Agrupadas */}
+                <div className="space-y-2 bg-[#FAF8F5] p-3 rounded-xl border border-[#E6DFD5]">
+                  {/* 1. FORMAÇÃO */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      1. Formação
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'aluno_regular', label: 'Aluno Regular' },
+                        { id: 'aluno_curso', label: 'Aluno de Curso' },
+                        { id: 'professor_visitante', label: 'Prof. Visitante' }
+                      ].map((cat) => {
+                        const isChecked = selectedMembresias.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (selectedMembresias.length > 1) {
+                                  setSelectedMembresias(selectedMembresias.filter((x) => x !== cat.id));
+                                }
+                              } else {
+                                setSelectedMembresias([...selectedMembresias, cat.id]);
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. SERVIÇOS */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      2. Serviços
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { id: 'membro_queima', label: 'Membro de Queima' },
+                        { id: 'membro_consultoria', label: 'Membro de Consultoria' }
+                      ].map((cat) => {
+                        const isChecked = selectedMembresias.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (selectedMembresias.length > 1) {
+                                  setSelectedMembresias(selectedMembresias.filter((x) => x !== cat.id));
+                                }
+                              } else {
+                                setSelectedMembresias([...selectedMembresias, cat.id]);
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. PESQUISA E PRODUÇÃO */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      3. Pesquisa e Produção
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'membro_pesquisador', label: 'Pesquisador' },
+                        { id: 'artista_residente', label: 'Residente' },
+                        { id: 'artista_coworking', label: 'Coworking' }
+                      ].map((cat) => {
+                        const isChecked = selectedMembresias.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (selectedMembresias.length > 1) {
+                                  setSelectedMembresias(selectedMembresias.filter((x) => x !== cat.id));
+                                }
+                              } else {
+                                setSelectedMembresias([...selectedMembresias, cat.id]);
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

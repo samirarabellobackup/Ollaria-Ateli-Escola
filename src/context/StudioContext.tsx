@@ -616,40 +616,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const accessCode = `OL-${randomDigits}`;
     const pin = String(Math.floor(1000 + Math.random() * 9000));
 
-    // Calculate total plan classes
-    let totalAulas = 4;
-    let valorPlano = 460;
-    let diasValidade = 30;
-
-    switch (formData.modalidade) {
-      case 'mensal':
-        totalAulas = 4;
-        valorPlano = formData.formaPagamentoPretendida === 'pix' ? 460 : 506;
-        diasValidade = 30;
-        break;
-      case 'bimestral':
-        totalAulas = 8;
-        valorPlano = formData.formaPagamentoPretendida === 'pix' ? 920 : 1012;
-        diasValidade = 60;
-        break;
-      case 'trimestral':
-        totalAulas = 12;
-        valorPlano = formData.formaPagamentoPretendida === 'pix' ? 1338.60 : 1472.45;
-        diasValidade = 90;
-        break;
-      case 'semestral':
-        totalAulas = 24;
-        valorPlano = formData.formaPagamentoPretendida === 'pix' ? 2539.20 : 3036;
-        diasValidade = 180;
-        break;
-    }
-
+    // Aluno Regular: contratação exclusivamente MENSAL e CONTÍNUA (sem data de término obrigatória)
+    const totalAulas = 4;
+    const valorPlano = formData.formaPagamentoPretendida === 'pix' ? 460 : 506;
     const today = new Date();
-    const endDate = new Date();
-    endDate.setDate(today.getDate() + diasValidade);
-
     const todayStr = today.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
 
     const newStudent: Student = {
       id: newId,
@@ -659,17 +630,32 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       email: formData.email,
       whatsapp: formData.telefoneWhatsapp,
       turma: formData.turmaDesejada,
-      modalidade: formData.modalidade,
+      modalidade: 'mensal',
       valorPlano,
       dataInicioPlano: todayStr,
-      dataFimPlano: endStr,
+      // Aluno Regular não possui data de término obrigatória; é contínuo
+      dataFimPlano: undefined,
       status: 'ativo',
       aulasTotaisPlano: totalAulas,
       aulasFeitas: 0,
       aulasRestantes: totalAulas,
       trancamentosUtilizadosDias: 0,
-      registrationData: formData,
-      dataMatricula: todayStr
+      registrationData: {
+        ...formData,
+        modalidade: 'mensal'
+      },
+      dataMatricula: todayStr,
+      servicosAtivos: ['aluno_regular'],
+      membresias: [
+        {
+          id: `mem-${Date.now()}`,
+          tipo: 'aluno_regular',
+          status: 'ativa',
+          dataInicio: todayStr,
+          modalidadeContratacao: 'mensal',
+          observacoes: 'Matrícula contínua com renovação e cobranças mensais automáticas.'
+        }
+      ]
     };
 
     setStudents((prev) => [newStudent, ...prev]);
@@ -678,13 +664,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const initialTx: FinancialTransaction = {
       id: `tx-${Date.now()}`,
       studentId: newId,
-      descricao: `Matrícula Aulas Regulares - Plano ${formData.modalidade.toUpperCase()} (${totalAulas} aulas)`,
+      descricao: `Membresia Ollaria – Aluno Regular (Mensalidade Contínua - 4 aulas/mês)`,
       categoria: 'mensalidade',
       valor: valorPlano,
       status: 'pendente',
       dataVencimento: todayStr,
       metodoPagamento: formData.formaPagamentoPretendida,
-      observacoes: `Aguardando confirmação de pagamento via ${formData.formaPagamentoPretendida.toUpperCase()} (Chave PIX: 61 996101254).`,
+      observacoes: `Primeira mensalidade contínua via ${formData.formaPagamentoPretendida.toUpperCase()} (Chave PIX: 61 996101254).`,
       createdAt: new Date().toISOString()
     };
     setTransactions((prev) => [initialTx, ...prev]);

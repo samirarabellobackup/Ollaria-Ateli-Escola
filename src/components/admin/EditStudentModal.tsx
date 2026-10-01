@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Student, ClassShift, PlanType } from '../../types';
+import { Student, ClassShift, PlanType, MembershipType, MEMBERSHIP_DEFINITIONS } from '../../types';
 import { useStudio } from '../../context/StudioContext';
 import {
   X,
@@ -60,11 +60,17 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     responsavelParentesco: '',
     contatoEmergenciaNome: '',
     contatoEmergenciaRelacao: '',
-    informacoesSaudeAtendimento: ''
+    informacoesSaudeAtendimento: '',
+    servicosAtivos: ['aluno_regular'] as MembershipType[]
   });
 
   useEffect(() => {
     if (student) {
+      const activeSrvs: MembershipType[] =
+        student.servicosAtivos && student.servicosAtivos.length > 0
+          ? student.servicosAtivos
+          : ['aluno_regular'];
+
       setFormData({
         nome: student.nome || '',
         nomePreferencia: student.registrationData?.nomePreferencia || '',
@@ -75,7 +81,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
         profissao: student.registrationData?.profissao || '',
         endereco: student.registrationData?.endereco || '',
         turma: student.turma || 'quarta-tarde',
-        modalidade: student.modalidade || 'trimestral',
+        modalidade: student.modalidade || 'mensal',
         status: student.status || 'ativo',
         valorPlano: student.valorPlano || 0,
         aulasTotaisPlano: student.aulasTotaisPlano || 0,
@@ -94,7 +100,8 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
         responsavelParentesco: student.registrationData?.responsavelParentesco || '',
         contatoEmergenciaNome: student.registrationData?.contatoEmergenciaNome || '',
         contatoEmergenciaRelacao: student.registrationData?.contatoEmergenciaRelacao || '',
-        informacoesSaudeAtendimento: student.registrationData?.informacoesSaudeAtendimento || ''
+        informacoesSaudeAtendimento: student.registrationData?.informacoesSaudeAtendimento || '',
+        servicosAtivos: activeSrvs
       });
       setSuccessMsg('');
     }
@@ -155,11 +162,12 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       trancamentosUtilizadosDias: Number(formData.trancamentosUtilizadosDias),
       accessCode: formData.accessCode.trim().toUpperCase(),
       pin: formData.pin.trim(),
+      servicosAtivos: formData.servicosAtivos,
       registrationData: updatedRegistrationData
     };
 
     updateStudent(updatedStudent);
-    setSuccessMsg('Perfil do aluno atualizado com sucesso!');
+    setSuccessMsg('Ficha de Membr@ Ollaria atualizada com sucesso!');
     setTimeout(() => {
       onClose();
     }, 900);
@@ -177,10 +185,10 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
             </div>
             <div>
               <h2 className="font-serif font-bold text-base text-[#2C241E]">
-                Editar Perfil do Aluno
+                Editar Ficha de Membr@ Ollaria
               </h2>
               <p className="text-xs text-[#7A6A5E]">
-                {student.nome} • Código: <span className="font-mono font-bold text-[#D97736]">{student.accessCode}</span>
+                {student.nome} • Matrícula: <span className="font-mono font-bold text-[#D97736]">{student.accessCode}</span>
               </p>
             </div>
           </div>
@@ -217,7 +225,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>Turma & Plano</span>
+            <span>Membresias & Plano</span>
           </button>
 
           <button
@@ -370,9 +378,157 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               </div>
             )}
 
-            {/* TAB 2: TURMA & PLANO */}
+            {/* TAB 2: TURMA, PLANO & MEMBRESIAS */}
             {activeTab === 'plano' && (
-              <div className="space-y-3.5">
+              <div className="space-y-4">
+                
+                {/* Tipo(s) de Membr@ Ollaria */}
+                <div className="space-y-2 bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E6DFD5]">
+                  <div>
+                    <label className="block text-xs font-bold text-[#2C241E] mb-0.5">
+                      Tipo(s) de Membr@ Ollaria
+                    </label>
+                    <p className="text-[11px] text-[#7A6A5E]">
+                      Selecione uma ou mais participações ativas para este membr@:
+                    </p>
+                  </div>
+
+                  {/* 1. FORMAÇÃO */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      1. Formação
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'aluno_regular' as MembershipType, label: 'Aluno Regular' },
+                        { id: 'aluno_curso' as MembershipType, label: 'Aluno de Curso' },
+                        { id: 'professor_visitante' as MembershipType, label: 'Prof. Visitante' }
+                      ].map((cat) => {
+                        const isChecked = formData.servicosAtivos.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (formData.servicosAtivos.length > 1) {
+                                  setFormData({
+                                    ...formData,
+                                    servicosAtivos: formData.servicosAtivos.filter((x) => x !== cat.id)
+                                  });
+                                }
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  servicosAtivos: [...formData.servicosAtivos, cat.id]
+                                });
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. SERVIÇOS */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      2. Serviços
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { id: 'membro_queima' as MembershipType, label: 'Membro de Queima' },
+                        { id: 'membro_consultoria' as MembershipType, label: 'Membro de Consultoria' }
+                      ].map((cat) => {
+                        const isChecked = formData.servicosAtivos.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (formData.servicosAtivos.length > 1) {
+                                  setFormData({
+                                    ...formData,
+                                    servicosAtivos: formData.servicosAtivos.filter((x) => x !== cat.id)
+                                  });
+                                }
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  servicosAtivos: [...formData.servicosAtivos, cat.id]
+                                });
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 3. PESQUISA E PRODUÇÃO */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#8C3A16] uppercase tracking-wider block mb-1">
+                      3. Pesquisa e Produção
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'membro_pesquisador' as MembershipType, label: 'Pesquisador' },
+                        { id: 'artista_residente' as MembershipType, label: 'Residente' },
+                        { id: 'artista_coworking' as MembershipType, label: 'Coworking' }
+                      ].map((cat) => {
+                        const isChecked = formData.servicosAtivos.includes(cat.id);
+                        return (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                if (formData.servicosAtivos.length > 1) {
+                                  setFormData({
+                                    ...formData,
+                                    servicosAtivos: formData.servicosAtivos.filter((x) => x !== cat.id)
+                                  });
+                                }
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  servicosAtivos: [...formData.servicosAtivos, cat.id]
+                                });
+                              }
+                            }}
+                            className={`px-2 py-1.5 rounded-lg border text-left text-[11px] font-semibold transition-all ${
+                              isChecked
+                                ? 'bg-[#2C241E] text-white border-[#2C241E] shadow-xs'
+                                : 'bg-white text-[#6B5A4D] border-[#D5CBC0] hover:border-[#B5A89B]'
+                            }`}
+                          >
+                            {isChecked ? '✓ ' : '+ '}
+                            {cat.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dados de Turma e Plano de Aluno Regular */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
@@ -399,10 +555,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                       onChange={(e) => setFormData({ ...formData, modalidade: e.target.value as PlanType })}
                       className="w-full px-3 py-2 rounded-xl border border-[#D5CBC0] bg-white text-xs font-medium text-[#2C241E]"
                     >
-                      <option value="mensal">Mensal (4 aulas)</option>
-                      <option value="bimestral">Bimestral (8 aulas)</option>
-                      <option value="trimestral">Trimestral (12 aulas)</option>
-                      <option value="semestral">Semestral (24 aulas)</option>
+                      <option value="mensal">Mensal (Contínuo)</option>
                     </select>
                   </div>
 
@@ -503,7 +656,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-semibold text-[#4A3E35] mb-1">
-                      Fim do Plano (Validade)
+                      Fim do Plano (Opcional - contínuo)
                     </label>
                     <input
                       type="date"
