@@ -10,12 +10,10 @@ import {
   Clock,
   Phone,
   Layers,
-  Users,
   Eye,
   EyeOff,
   Lock,
-  AlertCircle,
-  CheckCircle2
+  AlertCircle
 } from 'lucide-react';
 
 interface SecureAccessPortalProps {
@@ -35,17 +33,6 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
   const [showAdminPass, setShowAdminPass] = useState(false);
   const [adminError, setAdminError] = useState('');
 
-  const filteredStudents = students.filter((s) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      s.nome.toLowerCase().includes(q) ||
-      (s.registrationData?.nomePreferencia || '').toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q) ||
-      s.accessCode.toLowerCase().includes(q) ||
-      s.turma.toLowerCase().includes(q)
-    );
-  });
-
   const handleStudentAccess = (e: React.FormEvent) => {
     e.preventDefault();
     setStudentError('');
@@ -62,11 +49,11 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
     }
   };
 
-  const handleAdminAccess = (e: React.FormEvent) => {
+  const handleAdminAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError('');
 
-    const result = loginAsAdmin(adminPassword);
+    const result = await loginAsAdmin(adminPassword);
     if (!result.success) {
       setAdminError(result.message || 'Senha incorreta.');
     }
@@ -140,9 +127,9 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 <Sparkles className="w-5 h-5 text-[#D97736] shrink-0 mt-0.5" />
                 <div className="leading-relaxed">
                   <strong className="text-[#2C241E] font-bold block text-sm mb-0.5">
-                    Acesso Seguro ao Portal do Aluno
+                    Acesso Seguro — Portal Membr@ Ollaria
                   </strong>
-                  Selecione o seu nome na lista ou informe seu e-mail/matrícula e digite o seu PIN individual para acessar suas peças em forno, presenças e mensalidades.
+                  Selecione seu nome na lista ou informe seu e-mail/matrícula e digite o seu PIN individual de acesso.
                 </div>
               </div>
 
@@ -156,7 +143,7 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
               {/* Student Selector Dropdown */}
               <div>
                 <label className="block text-xs font-bold text-[#4A3E35] mb-1.5">
-                  Selecione o Aluno(a):
+                  Selecione o Membr@:
                 </label>
                 <select
                   id="select-student"
@@ -167,9 +154,10 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                   }}
                   className="w-full px-3.5 py-3 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 cursor-pointer"
                 >
+                  <option value="">Selecione seu nome cadastrado...</option>
                   {students.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.nome} • Turma: {st.turma} ({st.accessCode})
+                      {st.nome}
                     </option>
                   ))}
                 </select>
@@ -178,7 +166,7 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
               {/* Or Quick Search */}
               <div>
                 <label className="block text-xs font-bold text-[#4A3E35] mb-1.5">
-                  Ou busque por nome, turma ou e-mail:
+                  Ou busque por nome ou e-mail:
                 </label>
                 <div className="relative">
                   <Search className="w-4 h-4 text-[#8C7A6E] absolute left-3.5 top-3.5 pointer-events-none" />
@@ -196,48 +184,12 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 </div>
               </div>
 
-              {/* Quick Click Badges for Enrolled Students */}
-              <div>
-                <p className="text-[11px] font-bold text-[#8C7A6E] uppercase tracking-wider mb-2">
-                  Clique no seu nome para selecionar:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-                  {filteredStudents.slice(0, 8).map((st) => (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedStudentId(st.id);
-                        setSearchQuery('');
-                        setStudentError('');
-                      }}
-                      className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between group ${
-                        selectedStudentId === st.id
-                          ? 'border-[#D97736] bg-[#FAF0E6]'
-                          : 'border-[#E6DFD5] bg-white hover:bg-[#FAF8F5] hover:border-[#D5CBC0]'
-                      }`}
-                    >
-                      <div className="truncate">
-                        <span className="font-serif font-bold text-xs text-[#2C241E] block truncate">
-                          {st.nome}
-                        </span>
-                        <span className="text-[10px] text-[#7A6A5E]">
-                          {st.turma} • {st.modalidade}
-                        </span>
-                      </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-[#D97736] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Student PIN field */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-[#4A3E35]">
-                    Senha / PIN de Acesso Individual *:
+                    PIN de Acesso Individual *:
                   </label>
-                  <span className="text-[11px] text-[#7A6A5E] font-medium">4 dígitos</span>
                 </div>
                 <div className="relative">
                   <input
@@ -247,7 +199,7 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                       setStudentPin(e.target.value);
                       setStudentError('');
                     }}
-                    placeholder="Digite seu PIN (ex: 8421)"
+                    placeholder="Digite seu PIN"
                     className="w-full px-3.5 py-3 pr-10 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-[#2C241E] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
                     required
                   />
@@ -259,9 +211,6 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                     {showStudentPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8C7A6E] mt-1">
-                  Exemplos de PIN de teste: Bia: 8421 • Rodrigo: 2345 • Mari: 3456 • Lucas: 4567
-                </p>
               </div>
 
               <button
@@ -270,7 +219,7 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                 className="w-full py-3.5 rounded-xl bg-[#D97736] hover:bg-[#C26224] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-99"
               >
                 <Lock className="w-4 h-4" />
-                <span>Acessar Meu Portal de Aluno(a)</span>
+                <span>Acessar Meu Portal — Membr@ Ollaria</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -328,19 +277,6 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
                     {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8C7A6E] mt-1">
-                  Senha padrão da coordenação: <code className="bg-[#EBE4DA] px-1.5 py-0.5 rounded text-[#2C241E] font-mono">ollaria2026</code>
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#F7F3EE] border border-[#E6DFD5] space-y-1 text-xs text-[#6B5A4D]">
-                <div className="flex items-center gap-2 text-sm font-bold text-[#2C241E]">
-                  <Users className="w-4 h-4 text-[#D97736]" />
-                  <span>{students.length} alunos matriculados atualmente</span>
-                </div>
-                <p className="leading-relaxed text-[11px]">
-                  Coordenação e professores: informe a chave mestra para acessar o sistema de gestão.
-                </p>
               </div>
 
               <button

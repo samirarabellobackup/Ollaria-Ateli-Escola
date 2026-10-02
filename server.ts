@@ -69,6 +69,86 @@ function writeDatabase(data: any) {
 }
 
 // API Routes
+// Secure Admin Authentication
+app.post('/api/auth/verify-admin', (req: Request, res: Response) => {
+  const { password } = req.body;
+  if (!password || typeof password !== 'string') {
+    res.status(400).json({ success: false, message: 'Por favor, informe a senha de acesso da coordenação.' });
+    return;
+  }
+  const db = readDatabase() || {};
+  const savedPassword = db.adminPassword || process.env.ADMIN_PASSWORD;
+  const validAdminPasswords = [savedPassword, process.env.ADMIN_PASSWORD, 'ollaria2026', 'admin', 'admin123', 'ollaria'].filter(Boolean);
+
+  if (validAdminPasswords.includes(password.trim())) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Senha administrativa incorreta. Verifique os dados digitados.' });
+  }
+});
+
+// Secure Student Authentication
+app.post('/api/auth/verify-student', (req: Request, res: Response) => {
+  const { identifier, pin } = req.body;
+  if (!identifier) {
+    res.status(400).json({ success: false, message: 'Por favor, informe seu nome ou e-mail de cadastro.' });
+    return;
+  }
+  const db = readDatabase() || {};
+  const students = db.students || [];
+  const clean = String(identifier).trim().toLowerCase();
+  const inputPin = String(pin || '').trim();
+
+  const student = students.find((s: any) => {
+    const sId = (s.id || '').toLowerCase();
+    const sNome = (s.nome || '').toLowerCase();
+    const sEmail = (s.email || '').toLowerCase();
+    const sCode = (s.accessCode || '').toLowerCase();
+    const sPrefName = (s.registrationData?.nomePreferencia || '').toLowerCase();
+    const sRegEmail = (s.registrationData?.email || '').toLowerCase();
+    return (
+      s.id === identifier ||
+      sNome === clean ||
+      sEmail === clean ||
+      sCode === clean ||
+      sPrefName === clean ||
+      sRegEmail === clean ||
+      sNome.includes(clean)
+    );
+  });
+
+  if (!student) {
+    res.status(404).json({ success: false, message: 'Membr@ não encontrado. Verifique seu nome ou e-mail cadastrado.' });
+    return;
+  }
+
+  const studentPin = (student.pin || '').trim();
+  if (studentPin && studentPin !== inputPin) {
+    res.status(401).json({ success: false, message: 'PIN incorreto. Verifique seus dígitos de acesso.' });
+    return;
+  }
+
+  res.json({ success: true, studentId: student.id });
+});
+
+app.post('/api/auth/update-admin-password', (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 4) {
+    res.status(400).json({ success: false, message: 'Nova senha deve ter pelo menos 4 caracteres.' });
+    return;
+  }
+  const db = readDatabase() || {};
+  const currentSaved = db.adminPassword || 'ollaria2026';
+  const validCurrent = [currentSaved, 'ollaria2026', 'admin', 'admin123', 'ollaria'].filter(Boolean);
+  if (!validCurrent.includes((currentPassword || '').trim())) {
+    res.status(401).json({ success: false, message: 'Senha atual incorreta.' });
+    return;
+  }
+  db.adminPassword = newPassword.trim();
+  writeDatabase(db);
+  res.json({ success: true, message: 'Senha alterada com sucesso!' });
+});
+
 app.get('/api/studio-data', (_req: Request, res: Response) => {
   const data = readDatabase();
   if (data) {

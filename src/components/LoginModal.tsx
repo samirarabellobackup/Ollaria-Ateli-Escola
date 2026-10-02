@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStudio } from '../context/StudioContext';
-import { Shield, User, X, CheckCircle2, AlertCircle, ArrowRight, Palette, Eye, EyeOff, Lock, KeyRound } from 'lucide-react';
+import { Shield, User, X, CheckCircle2, AlertCircle, ArrowRight, Palette, Eye, EyeOff, Lock } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -44,10 +44,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    const result = loginAsAdmin(adminPassword);
+    const result = await loginAsAdmin(adminPassword);
     if (result.success) {
       setSuccessMsg('Acesso administrativo concedido!');
       setTimeout(() => {
@@ -132,16 +132,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             <form onSubmit={handleStudentLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#4A3E35] mb-1.5">
-                  Escolha o Aluno(a):
+                  Escolha o Membr@:
                 </label>
                 <select
                   value={selectedStudentId}
                   onChange={(e) => setSelectedStudentId(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#D97736]/30 cursor-pointer"
                 >
+                  <option value="">Selecione seu nome cadastrado...</option>
                   {students.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.nome} • Turma: {st.turma} ({st.accessCode})
+                      {st.nome}
                     </option>
                   ))}
                 </select>
@@ -153,7 +154,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="ex: seu.email@exemplo.com ou OL-XXXX"
+                  placeholder="ex: seu.email@exemplo.com ou identificação"
                   value={searchIdentifier}
                   onChange={(e) => {
                     setSearchIdentifier(e.target.value);
@@ -166,14 +167,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-[#4A3E35]">
-                    Senha / PIN de Acesso Individual *:
+                    PIN de Acesso Individual *:
                   </label>
-                  <span className="text-[11px] text-[#7A6A5E] font-medium">4 dígitos</span>
                 </div>
                 <div className="relative">
                   <input
                     type={showStudentPin ? 'text' : 'password'}
-                    placeholder="Digite seu PIN (ex: 8421)"
+                    placeholder="Digite seu PIN"
                     value={studentPin}
                     onChange={(e) => setStudentPin(e.target.value)}
                     className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-[#D5CBC0] bg-white text-[#2C241E] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#D97736]/30"
@@ -187,9 +187,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     {showStudentPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8C7A6E] mt-1">
-                  Exemplos de PIN de teste: Bia: 8421 • Rodrigo: 2345 • Mari: 3456 • Lucas: 4567
-                </p>
               </div>
 
               <button
@@ -197,7 +194,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 className="w-full py-3 rounded-xl bg-[#D97736] hover:bg-[#C26224] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-99"
               >
                 <Lock className="w-4 h-4" />
-                <span>Acessar Portal do Aluno com PIN</span>
+                <span>Acessar Portal Membr@ Ollaria</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -233,9 +230,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8C7A6E] mt-1">
-                  Senha padrão da coordenação: <code className="bg-[#EBE4DA] px-1.5 py-0.5 rounded text-[#2C241E] font-mono">ollaria2026</code>
-                </p>
               </div>
 
               <button

@@ -87,8 +87,8 @@ interface StudioContextType {
   setCurrentStudentById: (studentId: string) => void;
   selectStudent: (studentId: string) => void;
   loginAsStudent: (identifier: string, pin?: string) => { success: boolean; message?: string };
-  loginAsAdmin: (password?: string) => { success: boolean; message?: string };
-  updateAdminPassword: (newPass: string) => void;
+  loginAsAdmin: (password?: string) => Promise<{ success: boolean; message?: string }>;
+  updateAdminPassword: (newPass: string, currentPass?: string) => void;
   logout: () => void;
 
   // Student CRUD & Spreadsheet Backup/Import
@@ -570,7 +570,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!student) {
       return {
         success: false,
-        message: 'Aluno não encontrado. Selecione seu nome na lista ou confira o e-mail/código informado.'
+        message: 'Membr@ não encontrado. Selecione seu nome na lista ou confira o e-mail informado.'
       };
     }
 
@@ -582,13 +582,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!inputPin) {
         return {
           success: false,
-          message: 'Por favor, digite seu PIN/senha de acesso individual.'
+          message: 'Por favor, digite seu PIN de acesso individual.'
         };
       }
       if (inputPin !== studentPin) {
         return {
           success: false,
-          message: 'PIN incorreto para este aluno. Verifique seus dígitos de acesso.'
+          message: 'PIN incorreto para este membr@. Verifique seus dígitos de acesso.'
         };
       }
     }
@@ -599,7 +599,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return { success: true };
   };
 
-  const loginAsAdmin = (password?: string) => {
+  const loginAsAdmin = async (password?: string): Promise<{ success: boolean; message?: string }> => {
     const inputPass = (password || '').trim();
     if (!inputPass) {
       return {
@@ -608,31 +608,63 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
     }
 
-    let savedPass = '';
     try {
-      savedPass = localStorage.getItem(`${STORAGE_KEY_PREFIX}admin_password`) || '';
+      const resp = await fetch('/api/auth/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: inputPass })
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        setRole('admin');
+        setIsAdminPreview(false);
+        try {
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}role`, 'admin');
+        } catch {
+          // ignore
+        }
+        return { success: true };
+      }
+      return {
+        success: false,
+        message: data.message || 'Senha administrativa incorreta. Verifique os dados digitados.'
+      };
     } catch {
-      // ignore
+      // In case the network is temporarily offline or server fallback
+      let savedPass = '';
+      try {
+        savedPass = localStorage.getItem(`${STORAGE_KEY_PREFIX}admin_password`) || '';
+      } catch {
+        // ignore
+      }
+      if (savedPass && inputPass === savedPass) {
+        setRole('admin');
+        setIsAdminPreview(false);
+        return { success: true };
+      }
+      return {
+        success: false,
+        message: 'Senha administrativa incorreta. Verifique os dados digitados.'
+      };
     }
-
-    // Valid passwords: custom saved password, default 'ollaria2026', or standard keys
-    const validPasswords = [savedPass, 'ollaria2026', 'admin', 'admin123', 'sah2026', 'ollaria'].filter(Boolean);
-
-    if (validPasswords.includes(inputPass)) {
-      setRole('admin');
-      setIsAdminPreview(false);
-      return { success: true };
-    }
-
-    return {
-      success: false,
-      message: 'Senha administrativa incorreta. Verifique os dados digitados.'
-    };
   };
 
-  const updateAdminPassword = (newPass: string) => {
+  const updateAdminPassword = async (newPass: string, currentPass?: string) => {
     if (newPass.trim()) {
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}admin_password`, newPass.trim());
+      try {
+        await fetch('/api/auth/update-admin-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newPassword: newPass.trim(), currentPassword: currentPass || '' })
+        });
+      } catch {
+        // ignore
+      }
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}admin_password`, newPass.trim());
+      } catch {
+        // ignore
+      }
     }
   };
 
