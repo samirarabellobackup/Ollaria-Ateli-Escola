@@ -18,7 +18,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-1',
     accessCode: 'OL-4821',
-    pin: '',
+    pin: '8421',
     nome: 'Beatriz Vasconcelos',
     email: 'beatriz.vasc@gmail.com',
     whatsapp: '61981234567',
@@ -68,7 +68,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-2',
     accessCode: 'OL-7934',
-    pin: '',
+    pin: '2345',
     nome: 'Rodrigo Albuquerque',
     email: 'rodrigo.albuquerque@uol.com.br',
     whatsapp: '61992348899',
@@ -118,7 +118,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-3',
     accessCode: 'OL-3156',
-    pin: '',
+    pin: '3456',
     nome: 'Mariana Duarte Silva',
     email: 'mariana.duarte@gmail.com',
     whatsapp: '61998765432',
@@ -175,7 +175,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-4',
     accessCode: 'OL-6289',
-    pin: '',
+    pin: '4567',
     nome: 'Lucas Fontenele',
     email: 'lucas.fontenele@hotmail.com',
     whatsapp: '61984561234',
@@ -225,7 +225,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-5',
     accessCode: 'OL-5544',
-    pin: '',
+    pin: '5544',
     nome: 'Maria Silva',
     email: 'maria.silva@exemplo.com',
     whatsapp: '61988887777',
@@ -282,7 +282,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-6',
     accessCode: 'OL-8822',
-    pin: '',
+    pin: '8822',
     nome: 'Camila Rocha',
     email: 'camila.rocha@art.com',
     whatsapp: '61991223344',
@@ -339,7 +339,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-7',
     accessCode: 'OL-9911',
-    pin: '',
+    pin: '9911',
     nome: 'Prof. Alexandre Castro',
     email: 'alexandre.ceramica@gmail.com',
     whatsapp: '61993445566',
@@ -399,7 +399,7 @@ export const INITIAL_STUDENTS: Student[] = [
   {
     id: 'student-8',
     accessCode: 'OL-4433',
-    pin: '',
+    pin: '4433',
     nome: 'Juliana Mendes',
     email: 'juliana.mendes@gmail.com',
     whatsapp: '61997788990',

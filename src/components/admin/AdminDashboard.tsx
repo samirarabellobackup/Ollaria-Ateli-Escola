@@ -69,7 +69,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
     resolveProfileChange,
     createNotification,
     isServerSynced,
-    lastSavedTime
+    lastSavedTime,
+    resetDatabase
   } = useStudio();
 
   const [activeAdminTab, setActiveAdminTab] = useState<
@@ -522,6 +523,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
               >
                 <Database className="w-3.5 h-3.5 text-[#E6A15C]" />
                 <span>Backup Geral</span>
+              </button>
+
+              <button
+                id="btn-restore-initial-students"
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Deseja restaurar e revalidar o cadastro de todas as alunas/membr@s originais? Suas fichas e dados completos serão sincronizados com o servidor.')) {
+                    resetDatabase();
+                  }
+                }}
+                className="px-3 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                title="Restaurar a base original de cadastros das alunas"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-amber-700" />
+                <span>Recuperar Cadastros</span>
               </button>
             </div>
           </div>
