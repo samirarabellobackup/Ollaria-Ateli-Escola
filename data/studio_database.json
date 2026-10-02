@@ -577,7 +577,7 @@
       "horario": "15h20 - 17h50",
       "status": "presente",
       "observacao": "Primeira aula do plano. Modelagem e centralização no torno.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-08-05T18:00:00Z"
     },
     {
@@ -587,7 +587,7 @@
       "horario": "15h20 - 17h50",
       "status": "presente",
       "observacao": "Torno: cilindros e torneamento de bases.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-08-12T18:00:00Z"
     },
     {
@@ -597,7 +597,7 @@
       "horario": "15h20 - 17h50",
       "status": "falta",
       "observacao": "Ausência avisada com menos de 20 dias (sem direito a reposição).",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-08-19T18:00:00Z"
     },
     {
@@ -607,7 +607,7 @@
       "horario": "15h20 - 17h50",
       "status": "presente",
       "observacao": "Retoque de peças e aplicação de engobes.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-08-26T18:00:00Z"
     },
     {
@@ -617,7 +617,7 @@
       "horario": "15h20 - 17h50",
       "status": "presente",
       "observacao": "Esmaltação de peças biscoitadas por imersão.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-09-02T18:00:00Z"
     },
     {
@@ -627,7 +627,7 @@
       "horario": "15h20 - 17h50",
       "status": "presente",
       "observacao": "Construção da jarra escultórica.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-09-09T18:00:00Z"
     },
     {
@@ -647,7 +647,7 @@
       "horario": "18h20 - 20h50",
       "status": "presente",
       "observacao": "Construção de pratos em placas.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-09-02T21:00:00Z"
     },
     {
@@ -657,7 +657,7 @@
       "horario": "18h20 - 20h50",
       "status": "presente",
       "observacao": "Acabamento com espátula e aplicação de texturas.",
-      "registradoPor": "Samira Rebello",
+      "registradoPor": "Sah Pereira",
       "createdAt": "2026-09-09T21:00:00Z"
     }
   ],
@@ -1057,7 +1057,7 @@
       "acao": "Adição de Serviço",
       "infoAnterior": "Aluno Regular",
       "novaInfo": "Aluno Regular, Cliente Queima, Cliente Consultoria",
-      "responsavel": "Coordenação (Samira Rebello)",
+      "responsavel": "Coordenação (Sah Pereira)",
       "data": "2026-09-01T09:30:00Z"
     },
     {
@@ -1068,7 +1068,7 @@
       "acao": "Contratação de Horas de Consultoria",
       "infoAnterior": "0h",
       "novaInfo": "10h contratadas (R$ 1.600,00)",
-      "responsavel": "Coordenação (Samira Rebello)",
+      "responsavel": "Coordenação (Sah Pereira)",
       "data": "2026-09-01T10:00:00Z"
     },
     {
@@ -1079,7 +1079,7 @@
       "acao": "Entrada de Lote de Queima",
       "infoAnterior": "Nenhuma",
       "novaInfo": "Lote 01 - 12 peças a 1220°C (Em Queima)",
-      "responsavel": "Coordenação (Samira Rebello)",
+      "responsavel": "Coordenação (Sah Pereira)",
       "data": "2026-09-18T10:00:00Z"
     },
     {
@@ -1090,7 +1090,7 @@
       "acao": "Registro de Material com Cobrança",
       "infoAnterior": "Nenhum",
       "novaInfo": "Argila Tabaco 2kg — R$ 24,00 (Cobrar)",
-      "responsavel": "Coordenação (Samira Rebello)",
+      "responsavel": "Coordenação (Sah Pereira)",
       "data": "2026-09-12T16:00:00Z"
     },
     {
@@ -1101,9 +1101,60 @@
       "acao": "Confirmação de Horário Coworking",
       "infoAnterior": "Solicitado (01/10/2026 14h-18h)",
       "novaInfo": "Confirmado (01/10/2026 14h-18h - 4h)",
-      "responsavel": "Coordenação (Samira Rebello)",
+      "responsavel": "Coordenação (Sah Pereira)",
       "data": "2026-09-25T15:00:00Z"
     }
   ],
-  "updatedAt": "2026-10-02T16:00:27.753Z"
+  "updatedAt": "2026-10-02T16:32:03.706Z",
+  "classReplacements": [
+    {
+      "id": "rep-1",
+      "studentId": "student-1",
+      "aulaOrigemId": "att-10",
+      "dataOrigem": "2026-09-23",
+      "motivo": "Falta da Ollaria (Manutenção emergencial forno/estúdio)",
+      "responsabilidade": "Ollaria",
+      "tipo": "aula_inteira",
+      "quantidadeAulas": 1,
+      "minutosOriginal": 150,
+      "minutosRestantes": 150,
+      "status": "Pendente",
+      "observacoes": "Reposição concedida automaticamente por responsabilidade da Ollaria.",
+      "createdAt": "2026-09-23T18:00:00Z"
+    },
+    {
+      "id": "rep-2",
+      "studentId": "student-1",
+      "aulaOrigemId": "att-11",
+      "dataOrigem": "2026-09-30",
+      "motivo": "Início tardio por pane elétrica no bairro (30 min a repor)",
+      "responsabilidade": "Ollaria",
+      "tipo": "tempo_minutos",
+      "quantidadeAulas": 0,
+      "minutosOriginal": 30,
+      "minutosRestantes": 30,
+      "status": "Pendente",
+      "observacoes": "Reposição parcial de 30 minutos pendente de utilização.",
+      "createdAt": "2026-09-30T18:00:00Z"
+    },
+    {
+      "id": "rep-3",
+      "studentId": "student-2",
+      "aulaOrigemId": "att-12",
+      "dataOrigem": "2026-09-16",
+      "motivo": "Falta avisada com mais de 20 dias (viagem a trabalho)",
+      "responsabilidade": "Membr@",
+      "tipo": "aula_inteira",
+      "quantidadeAulas": 1,
+      "minutosOriginal": 150,
+      "minutosRestantes": 150,
+      "status": "Agendada",
+      "dataAgendada": "2026-10-14",
+      "horarioAgendado": "18h20 - 20h50",
+      "turmaAgendada": "quarta-noite",
+      "observacoes": "Reposição agendada para 14/10/2026. Permanece agendada até a realização.",
+      "createdAt": "2026-09-16T19:00:00Z"
+    }
+  ],
+  "adminPassword": "gestaollaria2016"
 }

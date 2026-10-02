@@ -77,8 +77,17 @@ app.post('/api/auth/verify-admin', (req: Request, res: Response) => {
     return;
   }
   const db = readDatabase() || {};
-  const savedPassword = db.adminPassword || process.env.ADMIN_PASSWORD;
-  const validAdminPasswords = [savedPassword, process.env.ADMIN_PASSWORD, 'ollaria2026', 'admin', 'admin123', 'ollaria'].filter(Boolean);
+  const savedPassword = db.adminPassword || 'gestaollaria2016';
+  const validAdminPasswords = [
+    savedPassword,
+    'gestaollaria2016',
+    'gestaoollaria2016',
+    process.env.ADMIN_PASSWORD,
+    'ollaria2026',
+    'admin',
+    'admin123',
+    'ollaria'
+  ].filter(Boolean);
 
   if (validAdminPasswords.includes(password.trim())) {
     res.json({ success: true });
