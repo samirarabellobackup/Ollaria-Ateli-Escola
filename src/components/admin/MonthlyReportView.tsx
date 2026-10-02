@@ -242,16 +242,22 @@ export const MonthlyReportView: React.FC = () => {
 
             <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E6DFD5] space-y-2 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#7A6A5E]">Presenças Confirmadas:</span>
-                <strong className="text-emerald-800">{monthAtt.filter((a) => a.status === 'presente').length}</strong>
+                <span className="text-[#7A6A5E]">Aulas Realizadas:</span>
+                <strong className="text-emerald-800">
+                  {monthAtt.filter((a) => a.status === 'Realizada' || a.status === 'presente').length}
+                </strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#7A6A5E]">Reposições Autorizadas (Regra 20 dias):</span>
-                <strong className="text-purple-800">{monthAtt.filter((a) => a.status === 'reposicao').length}</strong>
+                <span className="text-[#7A6A5E]">Reposições Autorizadas:</span>
+                <strong className="text-purple-800">
+                  {monthAtt.filter((a) => a.classificacao === 'Reposição' || a.status === 'reposicao').length}
+                </strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#7A6A5E]">Faltas Registradas:</span>
-                <strong className="text-red-800">{monthAtt.filter((a) => a.status === 'falta').length}</strong>
+                <strong className="text-red-800">
+                  {monthAtt.filter((a) => a.status === 'Falta do membr@' || a.status === 'Falta da Ollaria' || a.status === 'falta').length}
+                </strong>
               </div>
             </div>
           </div>

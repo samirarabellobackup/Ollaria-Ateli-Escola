@@ -88,7 +88,7 @@ export const SecureAccessPortal: React.FC<SecureAccessPortalProps> = ({ onOpenRe
           Arte • Cerâmica • Pesquisa & Acompanhamento de Alunas(os)
         </p>
         <p className="text-xs text-[#9E8B7E] mt-1">
-          Brasília, Distrito Federal • Coordenação Sah Pereira
+          Brasília, Distrito Federal • Coordenação Samira Rebello
         </p>
       </div>
 

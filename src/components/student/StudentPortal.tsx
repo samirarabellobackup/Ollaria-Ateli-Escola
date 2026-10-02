@@ -28,9 +28,17 @@ import {
   GraduationCap,
   BookOpen,
   CalendarCheck,
-  UserCheck
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
-import { PieceStage, MembershipType, MEMBERSHIP_DEFINITIONS } from '../../types';
+import {
+  PieceStage,
+  MembershipType,
+  MEMBERSHIP_DEFINITIONS,
+  normalizeAttendanceStatus,
+  normalizeClassClassification,
+  getMemberMonthlyClassSummary
+} from '../../types';
 import { StudentTermsModal } from '../terms/StudentTermsModal';
 
 type PortalTab =
@@ -68,6 +76,7 @@ export const StudentPortal: React.FC = () => {
     currentStudent,
     pieces,
     attendance,
+    classReplacements,
     transactions,
     notifications,
     changeRequests,
@@ -123,6 +132,8 @@ export const StudentPortal: React.FC = () => {
   // Filter student-specific data
   const myPieces = pieces.filter((p) => p.studentId === currentStudent.id);
   const myAttendance = attendance.filter((a) => a.studentId === currentStudent.id);
+  const myReplacements = classReplacements.filter((r) => r.studentId === currentStudent.id);
+  const classMonthlySummary = getMemberMonthlyClassSummary(currentStudent.id, attendance, classReplacements);
   const myTransactions = transactions.filter((t) => t.studentId === currentStudent.id);
   const myNotifications = notifications.filter((n) => n.studentId === currentStudent.id);
   const myChangeRequests = changeRequests.filter((r) => r.studentId === currentStudent.id);
@@ -742,10 +753,151 @@ export const StudentPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB CONTENT: PRESENÇA & AULAS */}
+      {/* TAB CONTENT: PRESENÇA & AULAS (SISTEMA COMPLETO DE FREQUÊNCIA E REPOSIÇÕES) */}
       {activeTab === 'aulas' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-150">
           
+          {/* 1. CARDS DE RESUMO (SEÇÕES 15, 16, 17: NUNCA MOSTRAR 5/4) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Mensalidade: 4 aulas por mês */}
+            <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5] space-y-2">
+              <span className="text-[11px] font-bold text-[#7A6A5E] uppercase tracking-wider block">
+                Mensalidade ({classMonthlySummary.mesAno})
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-serif font-black text-2xl text-[#2C241E]">
+                  {classMonthlySummary.countMensalidade}
+                </span>
+                <span className="text-sm font-bold text-[#7A6A5E]">/ 4 aulas</span>
+              </div>
+
+              {/* Barra de 4 segmentos */}
+              <div className="grid grid-cols-4 gap-1 pt-1">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-2 rounded-full ${
+                      step <= classMonthlySummary.countMensalidade
+                        ? 'bg-[#D97736]'
+                        : 'bg-[#EBE4DA]'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {classMonthlySummary.limiteAtingido ? (
+                <span className="text-[11px] font-bold text-amber-900 bg-amber-100/70 px-2 py-0.5 rounded-md block mt-1">
+                  4 aulas realizadas — limite mensal atingido
+                </span>
+              ) : (
+                <span className="text-[11px] text-[#7A6A5E] block mt-1">
+                  {4 - classMonthlySummary.countMensalidade} aula(s) restante(s) neste mês
+                </span>
+              )}
+            </div>
+
+            {/* Reposições Pendentes */}
+            <div className="bg-purple-50/70 p-5 rounded-2xl border border-purple-200 space-y-1">
+              <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider block">
+                Reposições Pendentes
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-serif font-black text-2xl text-purple-950">
+                  {classMonthlySummary.totalReposicoesPendentesCount}
+                </span>
+                <span className="text-xs font-semibold text-purple-800">
+                  ({classMonthlySummary.aulasInteirasPendentes} aula(s) + {classMonthlySummary.minutosPendentes % 150} min)
+                </span>
+              </div>
+              <p className="text-[11px] text-purple-700 pt-1">
+                Saldo disponível: <strong>{classMonthlySummary.minutosPendentes} minutos</strong>
+              </p>
+            </div>
+
+            {/* Reposições Agendadas */}
+            <div className="bg-blue-50/70 p-5 rounded-2xl border border-blue-200 space-y-1">
+              <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider block">
+                Reposições Agendadas
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-serif font-black text-2xl text-blue-950">
+                  {classMonthlySummary.totalReposicoesAgendadasCount}
+                </span>
+                <span className="text-xs font-semibold text-blue-800">marcadas p/ futuro</span>
+              </div>
+              <p className="text-[11px] text-blue-700 pt-1">
+                Realizadas: <strong>{classMonthlySummary.reposicoesRealizadasTotal.length}</strong> no total
+              </p>
+            </div>
+
+            {/* Aulas Extras */}
+            <div className="bg-amber-50/70 p-5 rounded-2xl border border-amber-200 space-y-1">
+              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                Aulas Extras Realizadas
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="font-serif font-black text-2xl text-amber-950">
+                  {classMonthlySummary.countExtrasMes}
+                </span>
+                <span className="text-xs font-semibold text-amber-800">neste mês</span>
+              </div>
+              <p className="text-[11px] text-amber-700 pt-1">
+                Reposições no mês: <strong>{classMonthlySummary.countReposicoesMes}</strong>
+              </p>
+            </div>
+
+          </div>
+
+          {/* 2. EXTRATO DE REPOSIÇÕES (se houver) */}
+          {myReplacements.length > 0 && (
+            <div className="bg-white p-5 rounded-2xl border border-purple-200 shadow-xs space-y-3">
+              <h4 className="font-serif font-bold text-sm text-[#2C241E] flex items-center justify-between border-b border-purple-100 pb-2">
+                <span className="flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4 text-purple-700" />
+                  Minhas Reposições Concedidas ({myReplacements.length})
+                </span>
+                <span className="text-xs text-[#7A6A5E] font-normal">
+                  Créditos vinculados a faltas da Ollaria ou concedidos pela coordenação
+                </span>
+              </h4>
+
+              <div className="divide-y divide-purple-100">
+                {myReplacements.map((rep) => (
+                  <div key={rep.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong>Origem: {new Date(rep.dataOrigem).toLocaleDateString('pt-BR')}</strong>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          rep.status === 'Pendente'
+                            ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                            : rep.status === 'Agendada'
+                            ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                            : rep.status === 'Realizada'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                            : 'bg-stone-200 text-stone-800'
+                        }`}>
+                          {rep.status}
+                        </span>
+                        <span className="font-semibold text-[#D97736]">
+                          Saldo: {rep.tipo === 'tempo_minutos' ? `${rep.minutosRestantes} min` : `1 Aula (${rep.minutosRestantes} min)`}
+                        </span>
+                      </div>
+                      <p className="text-[#5C4D41] mt-0.5">
+                        {rep.motivo} (Responsabilidade: {rep.responsabilidade || 'Ollaria'})
+                      </p>
+                      {rep.status === 'Agendada' && rep.dataAgendada && (
+                        <p className="text-blue-800 font-semibold mt-0.5">
+                          Agendada para: {new Date(rep.dataAgendada).toLocaleDateString('pt-BR')} ({rep.horarioAgendado})
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rules & Makeups summary box */}
           <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-[#E6DFD5]">
             <h4 className="font-bold text-sm text-[#2C241E] mb-2 flex items-center gap-2">
@@ -757,7 +909,7 @@ export const StudentPortal: React.FC = () => {
                 <strong>Reposições excepcionais:</strong> Permitidas apenas nos planos trimestral e semestral, desde que a ausência seja avisada com <strong>antecedência mínima de 20 dias</strong> e sujeita a vagas em outras turmas. Deve ocorrer no mesmo mês e não se acumula.
               </p>
               <p>
-                <strong>Trancamento do plano:</strong> Mensal não permite trancamento. Trimestral: 1 trancamento de até 15 dias corridos (até 2 aulas). Semestral: 1 trancamento de até 30 dias corridos (até 4 aulas).
+                <strong>Faltas da Ollaria:</strong> Aulas não realizadas por responsabilidade do ateliê geram <strong>automaticamente uma reposição pendente</strong> integral.
               </p>
             </div>
           </div>
@@ -778,25 +930,17 @@ export const StudentPortal: React.FC = () => {
                 <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
                   <tr>
                     <th className="p-3.5">Data & Horário</th>
+                    <th className="p-3.5">Classificação</th>
                     <th className="p-3.5">Status</th>
-                    <th className="p-3.5">Atividade Realizada / Observações</th>
+                    <th className="p-3.5">Reposição</th>
+                    <th className="p-3.5">Atividade / Observações</th>
                     <th className="p-3.5">Registrado Por</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EBE4DA]">
                   {myAttendance.map((rec) => {
-                    let badgeColor = 'bg-green-100 text-green-800';
-                    let label = 'Presente';
-                    if (rec.status === 'falta') {
-                      badgeColor = 'bg-red-100 text-red-800';
-                      label = 'Falta';
-                    } else if (rec.status === 'reposicao') {
-                      badgeColor = 'bg-purple-100 text-purple-800';
-                      label = 'Reposição';
-                    } else if (rec.status === 'agendada') {
-                      badgeColor = 'bg-blue-100 text-blue-800';
-                      label = 'Agendada';
-                    }
+                    const normSt = normalizeAttendanceStatus(rec.status);
+                    const normCl = normalizeClassClassification(rec);
 
                     return (
                       <tr key={rec.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
@@ -804,14 +948,47 @@ export const StudentPortal: React.FC = () => {
                           {new Date(rec.data).toLocaleDateString('pt-BR')}
                           <span className="text-xs text-[#7A6A5E] block">{rec.horario}</span>
                         </td>
+
                         <td className="p-3.5">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badgeColor}`}>
-                            {label}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            normCl === 'Mensalidade'
+                              ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                              : normCl === 'Reposição'
+                              ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                              : 'bg-amber-100 text-amber-900 border border-amber-200'
+                          }`}>
+                            {normCl}
                           </span>
                         </td>
-                        <td className="p-3.5 text-[#4A3E35]">
-                          {rec.observacao || 'Aula regular ministrada.'}
+
+                        <td className="p-3.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                            normSt === 'Realizada'
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : normSt === 'Falta da Ollaria'
+                              ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                              : normSt === 'Cancelada'
+                              ? 'bg-stone-200 text-stone-800 border border-stone-300'
+                              : 'bg-rose-100 text-rose-900 border border-rose-300'
+                          }`}>
+                            {normSt}
+                          </span>
                         </td>
+
+                        <td className="p-3.5 text-xs text-[#5C4D41]">
+                          {rec.decisaoReposicao || '-'}
+                          {rec.tempoAReporMinutos ? ` (${rec.tempoAReporMinutos} min)` : ''}
+                        </td>
+
+                        <td className="p-3.5 text-[#4A3E35] text-xs">
+                          {rec.motivoAusenciaAlteracao && (
+                            <span className="block font-semibold text-rose-800 mb-0.5">
+                              Motivo: {rec.motivoAusenciaAlteracao}
+                            </span>
+                          )}
+                          {rec.observacao || 'Aula regular cumprida.'}
+                        </td>
+
                         <td className="p-3.5 text-[#7A6A5E] text-xs">
                           {rec.registradoPor}
                         </td>
@@ -994,7 +1171,7 @@ export const StudentPortal: React.FC = () => {
                   Consultoria Cerâmica & Banco de Horas
                 </h3>
                 <p className="text-xs text-[#7A6A5E] mt-0.5">
-                  Acompanhamento de horas técnicas contratadas, agendamentos e histórico dos atendimentos com Sah Pereira.
+                  Acompanhamento de horas técnicas contratadas, agendamentos e histórico dos atendimentos com Samira Rebello.
                 </p>
               </div>
             </div>
@@ -1443,7 +1620,7 @@ export const StudentPortal: React.FC = () => {
                   PIX Ollaria Ateliê
                 </h3>
                 <p className="text-xs text-[#D5CBC0] mt-1 max-w-md">
-                  Chave Celular: <strong>61 996101254</strong> (Ateliê Sah Pereira / Ollaria Cerâmica).
+                  Chave Celular: <strong>61 996101254</strong> (Ateliê Samira Rebello / Ollaria Cerâmica).
                   Envie o comprovante para confirmação imediata de queimas e mensalidade.
                 </p>
               </div>
@@ -1774,7 +1951,7 @@ export const StudentPortal: React.FC = () => {
                       Autorização de Uso de Imagem: {currentStudent.registrationData.autorizacaoImagem === 'autorizo' ? 'Autorizado' : 'Não Autorizado'}
                     </strong>
                     <span className="text-[#7A6A5E] text-[11px]">
-                      Divulgação institucional dos processos e peças nas mídias sociais do Ateliê Sah Pereira | Ollaria
+                      Divulgação institucional dos processos e peças nas mídias sociais do Ateliê Samira Rebello | Ollaria
                     </span>
                   </div>
                 </div>

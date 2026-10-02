@@ -3,6 +3,11 @@ import {
   Student,
   PotteryPiece,
   AttendanceRecord,
+  ClassReplacement,
+  ClassAttendanceStatus,
+  ClassClassification,
+  ReplacementDecision,
+  ReplacementStatus,
   FinancialTransaction,
   SystemNotification,
   ProfileChangeRequest,
@@ -18,12 +23,16 @@ import {
   ConsultingAppointment,
   CoworkingBooking,
   MaterialUsage,
-  SystemAuditLog
+  SystemAuditLog,
+  normalizeAttendanceStatus,
+  normalizeClassClassification,
+  getMemberMonthlyClassSummary
 } from '../types';
 import {
   INITIAL_STUDENTS,
   INITIAL_PIECES,
   INITIAL_ATTENDANCE,
+  INITIAL_REPLACEMENTS,
   INITIAL_TRANSACTIONS,
   INITIAL_NOTIFICATIONS,
   INITIAL_CHANGE_REQUESTS,
@@ -97,9 +106,27 @@ interface StudioContextType {
   updatePieceEvaluation: (pieceId: string, aprovada: boolean, riscos?: string, obs?: string) => void;
   deletePiece: (pieceId: string) => void;
 
-  // Attendance & Classes
+  // Attendance, Classes & Makeups (CHAMADA & REGISTRO DE AULAS)
+  classReplacements: ClassReplacement[];
   registerAttendance: (studentId: string, status: AttendanceStatus, data: string, horario: string, observacao?: string) => void;
+  saveClassAttendance: (
+    record: AttendanceRecord,
+    options?: {
+      createTransaction?: boolean;
+      valorCobranca?: number;
+      descricaoCobranca?: string;
+      replacementIdToUse?: string;
+      minutosUtilizados?: number;
+    }
+  ) => void;
   deleteAttendance: (attendanceId: string) => void;
+  addClassReplacement: (rep: Omit<ClassReplacement, 'id' | 'createdAt'>) => ClassReplacement;
+  updateClassReplacement: (id: string, updates: Partial<ClassReplacement>) => void;
+  deleteClassReplacement: (id: string) => void;
+  scheduleClassReplacement: (replacementId: string, dataAgendada: string, horarioAgendado: string, turma?: string) => void;
+  markReplacementCompleted: (replacementId: string, aulaRealizadaId?: string) => void;
+  dismissClassReplacement: (replacementId: string, motivo?: string) => void;
+  cancelClassReplacement: (replacementId: string, motivo?: string) => void;
 
   // Finance
   addTransaction: (tx: Omit<FinancialTransaction, 'id' | 'createdAt'>) => FinancialTransaction;
@@ -166,6 +193,15 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
     } catch {
       return INITIAL_ATTENDANCE;
+    }
+  });
+
+  const [classReplacements, setClassReplacements] = useState<ClassReplacement[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}classReplacements`);
+      return saved ? JSON.parse(saved) : INITIAL_REPLACEMENTS;
+    } catch {
+      return INITIAL_REPLACEMENTS;
     }
   });
 
@@ -309,6 +345,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (Array.isArray(serverData.attendance)) {
           setAttendance(serverData.attendance);
         }
+        if (Array.isArray(serverData.classReplacements)) {
+          setClassReplacements(serverData.classReplacements);
+        }
         if (Array.isArray(serverData.transactions)) {
           setTransactions(serverData.transactions);
         }
@@ -387,6 +426,10 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [attendance]);
 
   useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}classReplacements`, JSON.stringify(classReplacements));
+  }, [classReplacements]);
+
+  useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}transactions`, JSON.stringify(transactions));
   }, [transactions]);
 
@@ -428,6 +471,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           students,
           pieces,
           attendance,
+          classReplacements,
           transactions,
           notifications,
           changeRequests,
@@ -454,6 +498,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     students,
     pieces,
     attendance,
+    classReplacements,
     transactions,
     notifications,
     changeRequests,
@@ -776,6 +821,200 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setPieces((prev) => prev.filter((p) => p.id !== pieceId));
   };
 
+  const recalculateStudentAttendanceBalance = (studentId: string, currentAttList: AttendanceRecord[]) => {
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id !== studentId) return s;
+        // Conta aulas da mensalidade realizadas (não conta faltas, reposições nem extras)
+        const realizadasMensalidade = currentAttList.filter(
+          (a) =>
+            a.studentId === studentId &&
+            normalizeAttendanceStatus(a.status) === 'Realizada' &&
+            normalizeClassClassification(a) === 'Mensalidade' &&
+            !a.naoContabilizarMensalidade
+        );
+        const newFeitas = realizadasMensalidade.length;
+        const newRestantes = Math.max(0, s.aulasTotaisPlano - newFeitas);
+        return {
+          ...s,
+          aulasFeitas: newFeitas,
+          aulasRestantes: newRestantes
+        };
+      })
+    );
+  };
+
+  // Salva ou edita uma aula (REGRA CRÍTICA: se ID já existe, atualiza sem criar novo registro)
+  const saveClassAttendance = (
+    record: AttendanceRecord,
+    options?: {
+      createTransaction?: boolean;
+      valorCobranca?: number;
+      descricaoCobranca?: string;
+      replacementIdToUse?: string;
+      minutosUtilizados?: number;
+    }
+  ) => {
+    const isEdit = attendance.some((a) => a.id === record.id);
+    const normStatus = normalizeAttendanceStatus(record.status);
+    const normClassif = normalizeClassClassification(record);
+
+    // Se for falta da Ollaria, reposição é concedida automaticamente (Seção 6)
+    let decisao = record.decisaoReposicao;
+    if (normStatus === 'Falta da Ollaria') {
+      decisao = 'Reposição concedida';
+    } else if (!decisao) {
+      if (normStatus === 'Realizada') {
+        decisao = 'Sem reposição';
+      } else {
+        decisao = 'Reposição pendente de decisão';
+      }
+    }
+
+    let reposicaoGeradaId = record.reposicaoId;
+
+    // Regras de geração de reposição
+    const isTimeOnly = (record.tempoAReporMinutos !== undefined && record.tempoAReporMinutos > 0 && normStatus === 'Realizada');
+    const shouldGenerateReplacement =
+      decisao === 'Reposição concedida' &&
+      (normStatus === 'Falta da Ollaria' || normStatus === 'Falta do membr@' || normStatus === 'Cancelada' || isTimeOnly);
+
+    if (shouldGenerateReplacement) {
+      // Verificar se já existe reposição associada
+      const existingRep = classReplacements.find(
+        (r) => r.aulaOrigemId === record.id || (reposicaoGeradaId && r.id === reposicaoGeradaId)
+      );
+
+      const durPrev = record.duracaoPrevistaMinutos || 150;
+      const durRepor = isTimeOnly ? record.tempoAReporMinutos! : durPrev;
+
+      if (!existingRep) {
+        const newRep: ClassReplacement = {
+          id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          studentId: record.studentId,
+          aulaOrigemId: record.id,
+          dataOrigem: record.data,
+          motivo:
+            record.motivoAusenciaAlteracao ||
+            (normStatus === 'Falta da Ollaria'
+              ? 'Falta da Ollaria (automática)'
+              : normStatus === 'Falta do membr@'
+              ? 'Falta do membr@ com reposição concedida'
+              : isTimeOnly
+              ? `Início tardio / atraso (${durRepor} min a repor)`
+              : 'Aula cancelada com reposição concedida'),
+          responsabilidade: record.responsabilidadeAusencia || (normStatus === 'Falta da Ollaria' ? 'Ollaria' : 'Membr@'),
+          tipo: isTimeOnly ? 'tempo_minutos' : 'aula_inteira',
+          quantidadeAulas: isTimeOnly ? 0 : 1,
+          minutosOriginal: durRepor,
+          minutosRestantes: durRepor,
+          status: 'Pendente',
+          observacoes: record.observacao,
+          createdAt: new Date().toISOString()
+        };
+        reposicaoGeradaId = newRep.id;
+        setClassReplacements((prev) => [newRep, ...prev]);
+      } else {
+        // Atualiza a reposição existente vinculada à aula
+        setClassReplacements((prev) =>
+          prev.map((r) => {
+            if (r.id !== existingRep.id) return r;
+            return {
+              ...r,
+              dataOrigem: record.data,
+              motivo: record.motivoAusenciaAlteracao || r.motivo,
+              responsabilidade: record.responsabilidadeAusencia || r.responsabilidade,
+              observacoes: record.observacao || r.observacoes,
+              minutosOriginal: durRepor,
+              updatedAt: new Date().toISOString()
+            };
+          })
+        );
+      }
+    }
+
+    // Se for uma aula de reposição que foi realizada, atualiza a reposição utilizada
+    const repToUseId = options?.replacementIdToUse || record.reposicaoUtilizadaId;
+    if (normClassif === 'Reposição' && repToUseId) {
+      setClassReplacements((prev) =>
+        prev.map((r) => {
+          if (r.id !== repToUseId) return r;
+          if (normStatus === 'Realizada') {
+            if (r.tipo === 'tempo_minutos' && options?.minutosUtilizados) {
+              const rest = Math.max(0, r.minutosRestantes - options.minutosUtilizados);
+              return {
+                ...r,
+                minutosRestantes: rest,
+                status: rest === 0 ? 'Realizada' : 'Pendente',
+                aulaAgendadaId: record.id,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return {
+              ...r,
+              minutosRestantes: 0,
+              status: 'Realizada',
+              aulaAgendadaId: record.id,
+              updatedAt: new Date().toISOString()
+            };
+          } else if (normStatus === 'Cancelada') {
+            return {
+              ...r,
+              status: 'Pendente',
+              aulaAgendadaId: undefined,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return r;
+        })
+      );
+    }
+
+    // Cobrança associada
+    let transacaoId = record.transacaoId;
+    if (options?.createTransaction && options.valorCobranca && options.valorCobranca > 0) {
+      const tx = addTransaction({
+        studentId: record.studentId,
+        descricao: options.descricaoCobranca || `Cobrança aula ${normClassif} (${record.data})`,
+        categoria: normClassif === 'Extra' ? 'curso' : 'outro',
+        valor: options.valorCobranca,
+        status: record.statusCobranca || 'pendente',
+        dataVencimento: record.data,
+        metodoPagamento: 'pix',
+        observacoes: `Gerado a partir da aula registrada em ${record.data}`
+      });
+      transacaoId = tx.id;
+    }
+
+    const finalRecord: AttendanceRecord = {
+      ...record,
+      id: record.id || `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      status: normStatus,
+      classificacao: normClassif,
+      decisaoReposicao: decisao,
+      reposicaoId: reposicaoGeradaId,
+      reposicaoUtilizadaId: repToUseId,
+      transacaoId,
+      temCobranca: record.temCobranca || (!!options?.createTransaction && (options?.valorCobranca ?? 0) > 0),
+      valorCobranca: options?.valorCobranca ?? record.valorCobranca,
+      descricaoCobranca: options?.descricaoCobranca ?? record.descricaoCobranca,
+      statusCobranca: record.statusCobranca || 'pendente',
+      registradoPor: record.registradoPor || 'Samira Rebello (Ollaria)',
+      createdAt: record.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    let nextAttList: AttendanceRecord[];
+    if (isEdit) {
+      nextAttList = attendance.map((a) => (a.id === finalRecord.id ? finalRecord : a));
+    } else {
+      nextAttList = [finalRecord, ...attendance];
+    }
+
+    setAttendance(nextAttList);
+    recalculateStudentAttendanceBalance(record.studentId, nextAttList);
+  };
+
   const registerAttendance = (
     studentId: string,
     status: AttendanceStatus,
@@ -783,53 +1022,160 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     horario: string,
     observacao?: string
   ) => {
+    const normStatus = normalizeAttendanceStatus(status);
     const newRecord: AttendanceRecord = {
-      id: `att-${Date.now()}`,
+      id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       studentId,
       data,
       horario,
-      status,
+      horarioPrevisto: horario,
+      horarioRealizado: normStatus === 'Realizada' ? horario : undefined,
+      duracaoPrevistaMinutos: 150,
+      duracaoRealizadaMinutos: normStatus === 'Realizada' ? 150 : 0,
+      status: normStatus,
+      classificacao: status === 'reposicao' ? 'Reposição' : 'Mensalidade',
+      decisaoReposicao:
+        normStatus === 'Falta da Ollaria'
+          ? 'Reposição concedida'
+          : normStatus === 'Realizada'
+          ? 'Sem reposição'
+          : 'Reposição pendente de decisão',
       observacao,
-      registradoPor: 'Sah Pereira (Ollaria)',
+      registradoPor: 'Samira Rebello (Ollaria)',
       createdAt: new Date().toISOString()
     };
-
-    setAttendance((prev) => [newRecord, ...prev]);
-
-    // Recalculate student classes done and remaining
-    setStudents((prev) =>
-      prev.map((s) => {
-        if (s.id !== studentId) return s;
-        if (status === 'presente' || status === 'reposicao') {
-          const newFeitas = s.aulasFeitas + 1;
-          const newRestantes = Math.max(0, s.aulasTotaisPlano - newFeitas);
-          return {
-            ...s,
-            aulasFeitas: newFeitas,
-            aulasRestantes: newRestantes
-          };
-        }
-        return s;
-      })
-    );
+    saveClassAttendance(newRecord);
   };
 
   const deleteAttendance = (attendanceId: string) => {
     const rec = attendance.find((a) => a.id === attendanceId);
-    if (rec && (rec.status === 'presente' || rec.status === 'reposicao')) {
-      setStudents((prev) =>
-        prev.map((s) => {
-          if (s.id !== rec.studentId) return s;
-          const newFeitas = Math.max(0, s.aulasFeitas - 1);
-          return {
-            ...s,
-            aulasFeitas: newFeitas,
-            aulasRestantes: s.aulasTotaisPlano - newFeitas
-          };
-        })
-      );
+    const nextList = attendance.filter((a) => a.id !== attendanceId);
+    setAttendance(nextList);
+
+    if (rec) {
+      // Se havia reposição gerada a partir desta aula e ainda estava pendente, remove ou cancela
+      if (rec.reposicaoId) {
+        setClassReplacements((prev) =>
+          prev.filter((r) => r.id !== rec.reposicaoId || r.status !== 'Pendente')
+        );
+      }
+      recalculateStudentAttendanceBalance(rec.studentId, nextList);
     }
-    setAttendance((prev) => prev.filter((a) => a.id !== attendanceId));
+  };
+
+  // Funções de Gerenciamento de Reposições
+  const addClassReplacement = (repData: Omit<ClassReplacement, 'id' | 'createdAt'>): ClassReplacement => {
+    const newRep: ClassReplacement = {
+      ...repData,
+      id: `rep-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: new Date().toISOString()
+    };
+    setClassReplacements((prev) => [newRep, ...prev]);
+    return newRep;
+  };
+
+  const updateClassReplacement = (id: string, updates: Partial<ClassReplacement>) => {
+    setClassReplacements((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r))
+    );
+  };
+
+  const deleteClassReplacement = (id: string) => {
+    setClassReplacements((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const scheduleClassReplacement = (
+    replacementId: string,
+    dataAgendada: string,
+    horarioAgendado: string,
+    turma?: string
+  ) => {
+    const rep = classReplacements.find((r) => r.id === replacementId);
+    if (!rep) return;
+
+    // Reposição agendada NÃO é reposição realizada (Seção 12)
+    // Cria uma aula com status 'Realizada' no futuro ou pendente, ou atualiza a reposição com status 'Agendada'
+    const newClassId = `att-sched-${Date.now()}`;
+    const scheduledClass: AttendanceRecord = {
+      id: newClassId,
+      studentId: rep.studentId,
+      data: dataAgendada,
+      horario: horarioAgendado,
+      horarioPrevisto: horarioAgendado,
+      turma: turma,
+      duracaoPrevistaMinutos: rep.minutosOriginal || 150,
+      duracaoRealizadaMinutos: 0,
+      status: 'Realizada',
+      classificacao: 'Reposição',
+      reposicaoUtilizadaId: replacementId,
+      observacao: `Reposição agendada para ${dataAgendada}. Origem: ${rep.motivo}`,
+      registradoPor: 'Samira Rebello (Ollaria)',
+      createdAt: new Date().toISOString()
+    };
+
+    setClassReplacements((prev) =>
+      prev.map((r) =>
+        r.id === replacementId
+          ? {
+              ...r,
+              status: 'Agendada',
+              dataAgendada,
+              horarioAgendado,
+              turmaAgendada: turma,
+              aulaAgendadaId: newClassId,
+              updatedAt: new Date().toISOString()
+            }
+          : r
+      )
+    );
+
+    setAttendance((prev) => [scheduledClass, ...prev]);
+  };
+
+  const markReplacementCompleted = (replacementId: string, aulaRealizadaId?: string) => {
+    setClassReplacements((prev) =>
+      prev.map((r) =>
+        r.id === replacementId
+          ? {
+              ...r,
+              status: 'Realizada',
+              minutosRestantes: 0,
+              aulaAgendadaId: aulaRealizadaId || r.aulaAgendadaId,
+              updatedAt: new Date().toISOString()
+            }
+          : r
+      )
+    );
+  };
+
+  const dismissClassReplacement = (replacementId: string, motivo?: string) => {
+    setClassReplacements((prev) =>
+      prev.map((r) =>
+        r.id === replacementId
+          ? {
+              ...r,
+              status: 'Dispensada',
+              motivoDispensadaCancelada: motivo || 'Dispensada pela coordenação',
+              updatedAt: new Date().toISOString()
+            }
+          : r
+      )
+    );
+  };
+
+  const cancelClassReplacement = (replacementId: string, motivo?: string) => {
+    setClassReplacements((prev) =>
+      prev.map((r) =>
+        r.id === replacementId
+          ? {
+              ...r,
+              status: 'Cancelada',
+              motivoDispensadaCancelada: motivo || 'Cancelada pela coordenação',
+              updatedAt: new Date().toISOString()
+            }
+          : r
+      )
+    );
   };
 
   const addTransaction = (txData: Omit<FinancialTransaction, 'id' | 'createdAt'>): FinancialTransaction => {
@@ -1293,9 +1639,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}transactions`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}notifications`);
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}changeRequests`);
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}classReplacements`);
     setStudents(INITIAL_STUDENTS);
     setPieces(INITIAL_PIECES);
     setAttendance(INITIAL_ATTENDANCE);
+    setClassReplacements(INITIAL_REPLACEMENTS);
     setTransactions(INITIAL_TRANSACTIONS);
     setNotifications(INITIAL_NOTIFICATIONS);
     setChangeRequests(INITIAL_CHANGE_REQUESTS);
@@ -1310,6 +1658,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         students,
         pieces,
         attendance,
+        classReplacements,
         transactions,
         notifications,
         changeRequests,
@@ -1352,7 +1701,15 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         updatePieceEvaluation,
         deletePiece,
         registerAttendance,
+        saveClassAttendance,
         deleteAttendance,
+        addClassReplacement,
+        updateClassReplacement,
+        deleteClassReplacement,
+        scheduleClassReplacement,
+        markReplacementCompleted,
+        dismissClassReplacement,
+        cancelClassReplacement,
         addTransaction,
         markTransactionAsPaid,
         deleteTransaction,

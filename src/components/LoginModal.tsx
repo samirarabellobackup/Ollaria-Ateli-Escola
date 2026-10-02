@@ -209,7 +209,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             /* Admin Login Form */
             <form onSubmit={handleAdminLogin} className="space-y-4">
               <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-[#E6DFD5] text-xs text-[#6B5A4D]">
-                Painel exclusivo para coordenação e gestão do ateliê (Sah Pereira).
+                Painel exclusivo para coordenação e gestão do ateliê (Samira Rebello).
               </div>
 
               <div>

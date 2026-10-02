@@ -16,7 +16,35 @@ export type PieceStage =
   | 'queimada_pronta' // Queimada e disponível para retirada (prazo 90 dias)
   | 'retirada_entregue'; // Já retirada pelo aluno
 
-export type AttendanceStatus = 'presente' | 'falta' | 'reposicao' | 'trancado' | 'agendada';
+// 4 Status padronizados da aula (Seção 2)
+export type ClassAttendanceStatus = 
+  | 'Realizada'
+  | 'Falta do membr@'
+  | 'Falta da Ollaria'
+  | 'Cancelada';
+
+// Classificação da aula (Seção 3)
+export type ClassClassification = 
+  | 'Mensalidade'
+  | 'Reposição'
+  | 'Extra';
+
+// Decisão sobre reposição (Seção 4)
+export type ReplacementDecision = 
+  | 'Sem reposição'
+  | 'Reposição pendente de decisão'
+  | 'Reposição concedida';
+
+// Status da reposição (Seção 11)
+export type ReplacementStatus = 
+  | 'Pendente'
+  | 'Agendada'
+  | 'Realizada'
+  | 'Cancelada'
+  | 'Dispensada';
+
+// Mantém suporte para compatibilidade com dados legados
+export type AttendanceStatus = ClassAttendanceStatus | 'presente' | 'falta' | 'reposicao' | 'trancado' | 'agendada';
 
 export type UserRole = 'admin' | 'student' | 'guest';
 
@@ -185,12 +213,72 @@ export type MembroOllaria = Student;
 export interface AttendanceRecord {
   id: string;
   studentId: string;
-  data: string;
-  horario: string;
-  status: AttendanceStatus;
+  data: string; // Formato YYYY-MM-DD
+  horario: string; // Ex: "15:20 - 17:50"
+  horarioPrevisto?: string; // Ex: "15:20 - 17:50"
+  horarioRealizado?: string; // Ex: "15:20 - 17:50" ou "15:50 - 17:50"
+  duracaoPrevistaMinutos?: number; // Padrão: 150 minutos (2h30)
+  duracaoRealizadaMinutos?: number; // Ex: 150 ou 120
+  tempoNaoRealizadoMinutos?: number; // Ex: 30 minutos
+  tempoAReporMinutos?: number; // Tempo calculado a repor
+  turma?: string; // Ex: "quarta-tarde", "quarta-noite", "sabado-manha"
+  status: AttendanceStatus; // "Realizada" | "Falta do membr@" | "Falta da Ollaria" | "Cancelada"
+  classificacao?: ClassClassification; // "Mensalidade" | "Reposição" | "Extra"
+  decisaoReposicao?: ReplacementDecision; // "Sem reposição" | "Reposição pendente de decisão" | "Reposição concedida"
+  statusReposicao?: ReplacementStatus; // "Pendente" | "Agendada" | "Realizada" | "Cancelada" | "Dispensada"
+  reposicaoId?: string; // ID da reposição gerada a partir desta falta/cancelamento
+  reposicaoUtilizadaId?: string; // ID da reposição consumida nesta aula
+  motivoAusenciaAlteracao?: string; // Motivo da falta/alteração/cancelamento
+  responsabilidadeAusencia?: 'Membr@' | 'Ollaria' | 'Ambos' | 'Força Maior' | string;
+  naoContabilizarMensalidade?: boolean; // Opção explícita de não contabilizar nas 4 aulas mensais
+  temCobranca?: boolean; // Se há cobrança associada à aula
+  valorCobranca?: number;
+  descricaoCobranca?: string;
+  statusCobranca?: 'pago' | 'pendente';
+  transacaoId?: string; // ID da transação financeira gerada, se houver
   observacao?: string;
   registradoPor: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ClassReplacement {
+  id: string;
+  studentId: string;
+  aulaOrigemId?: string; // Vinculada à aula original
+  dataOrigem: string;
+  motivo: string;
+  responsabilidade?: 'Membr@' | 'Ollaria' | 'Ambos' | 'Força Maior' | string;
+  tipo: 'aula_inteira' | 'tempo_minutos';
+  quantidadeAulas: number; // Ex: 1 aula
+  minutosOriginal: number; // Ex: 150 minutos ou 30 minutos
+  minutosRestantes: number; // Ex: 150 min (ou 30 min se uso parcial)
+  status: ReplacementStatus; // "Pendente" | "Agendada" | "Realizada" | "Cancelada" | "Dispensada"
+  aulaAgendadaId?: string; // ID da aula futura em que foi agendada ou utilizada
+  dataAgendada?: string;
+  horarioAgendado?: string;
+  turmaAgendada?: string;
+  motivoDispensadaCancelada?: string;
+  observacoes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// Helpers para garantir padronização rigorosa da nomenclatura
+export function normalizeAttendanceStatus(rawStatus: string | undefined): ClassAttendanceStatus {
+  if (!rawStatus) return 'Realizada';
+  if (rawStatus === 'Realizada' || rawStatus === 'presente' || rawStatus === 'reposicao') return 'Realizada';
+  if (rawStatus === 'Falta da Ollaria') return 'Falta da Ollaria';
+  if (rawStatus === 'Cancelada' || rawStatus === 'trancado') return 'Cancelada';
+  if (rawStatus === 'Falta do membr@' || rawStatus === 'falta') return 'Falta do membr@';
+  return 'Realizada';
+}
+
+export function normalizeClassClassification(rec: Partial<AttendanceRecord> | undefined): ClassClassification {
+  if (!rec) return 'Mensalidade';
+  if (rec.classificacao) return rec.classificacao;
+  if (rec.status === 'reposicao') return 'Reposição';
+  return 'Mensalidade';
 }
 
 export interface PotteryPiece {
@@ -479,4 +567,82 @@ export const MEMBERSHIP_DEFINITIONS: Record<
     descricao: 'Uso de bancadas, tornos elétricos e infraestrutura com agendamento prévio.'
   }
 };
+
+export function getMemberMonthlyClassSummary(
+  studentId: string,
+  attendanceList: AttendanceRecord[],
+  replacementsList: ClassReplacement[] = [],
+  targetMonth?: string // YYYY-MM, padrão: mês atual
+) {
+  const currentMonthStr = targetMonth || new Date().toISOString().substring(0, 7);
+  
+  // Aulas do mês selecionado para o membr@
+  const monthAttendance = attendanceList.filter((a) => {
+    return a.studentId === studentId && (a.data || '').startsWith(currentMonthStr);
+  });
+
+  // Aulas realizadas da mensalidade (Classificação = Mensalidade e Status = Realizada, sem flag de desconsiderar)
+  const mensalidadeRealizadas = monthAttendance.filter((a) => {
+    const status = normalizeAttendanceStatus(a.status);
+    const classif = normalizeClassClassification(a);
+    return status === 'Realizada' && classif === 'Mensalidade' && !a.naoContabilizarMensalidade;
+  });
+
+  // Reposições realizadas no mês
+  const reposicoesRealizadasNoMes = monthAttendance.filter((a) => {
+    const status = normalizeAttendanceStatus(a.status);
+    const classif = normalizeClassClassification(a);
+    return status === 'Realizada' && classif === 'Reposição';
+  });
+
+  // Aulas extras realizadas no mês
+  const extrasRealizadasNoMes = monthAttendance.filter((a) => {
+    const status = normalizeAttendanceStatus(a.status);
+    const classif = normalizeClassClassification(a);
+    return status === 'Realizada' && classif === 'Extra';
+  });
+
+  // Faltas no mês
+  const faltasMembroNoMes = monthAttendance.filter((a) => normalizeAttendanceStatus(a.status) === 'Falta do membr@');
+  const faltasOllariaNoMes = monthAttendance.filter((a) => normalizeAttendanceStatus(a.status) === 'Falta da Ollaria');
+  const canceladasNoMes = monthAttendance.filter((a) => normalizeAttendanceStatus(a.status) === 'Cancelada');
+
+  // Reposições gerais do aluno
+  const studentReplacements = replacementsList.filter((r) => r.studentId === studentId);
+  const reposicoesPendentes = studentReplacements.filter((r) => r.status === 'Pendente');
+  const reposicoesAgendadas = studentReplacements.filter((r) => r.status === 'Agendada');
+  const reposicoesRealizadasTotal = studentReplacements.filter((r) => r.status === 'Realizada');
+  const reposicoesCanceladasTotal = studentReplacements.filter((r) => r.status === 'Cancelada');
+  const reposicoesDispensadasTotal = studentReplacements.filter((r) => r.status === 'Dispensada');
+
+  const minutosPendentes = reposicoesPendentes.reduce((acc, r) => acc + (r.minutosRestantes || 0), 0);
+  const aulasInteirasPendentes = reposicoesPendentes.filter((r) => r.tipo === 'aula_inteira' && (r.minutosRestantes > 0 || r.quantidadeAulas > 0)).length;
+
+  const countMensalidade = mensalidadeRealizadas.length;
+  const limiteAtingido = countMensalidade >= 4;
+
+  return {
+    mesAno: currentMonthStr,
+    countMensalidade, // ex: 1, 2, 3 ou 4
+    totalMensalidadeMax: 4,
+    limiteAtingido,
+    countReposicoesMes: reposicoesRealizadasNoMes.length,
+    countExtrasMes: extrasRealizadasNoMes.length,
+    faltasMembroNoMes: faltasMembroNoMes.length,
+    faltasOllariaNoMes: faltasOllariaNoMes.length,
+    canceladasNoMes: canceladasNoMes.length,
+    totalAulasMes: monthAttendance.length,
+    // Reposições
+    studentReplacements,
+    reposicoesPendentes,
+    reposicoesAgendadas,
+    reposicoesRealizadasTotal,
+    reposicoesCanceladasTotal,
+    reposicoesDispensadasTotal,
+    minutosPendentes,
+    aulasInteirasPendentes,
+    totalReposicoesPendentesCount: reposicoesPendentes.length,
+    totalReposicoesAgendadasCount: reposicoesAgendadas.length
+  };
+}
 

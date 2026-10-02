@@ -192,7 +192,7 @@ export const MemberUnifiedModal: React.FC<MemberUnifiedModalProps> = ({
       modulo: 'membresia',
       acao: exists ? 'Remoção de Membresia' : 'Adição de Membresia',
       novaInfo: `${exists ? 'Removido' : 'Adicionado'}: ${MEMBERSHIP_DEFINITIONS[tipo]?.titulo || tipo}`,
-      responsavel: 'Coordenação (Sah Pereira)'
+      responsavel: 'Coordenação (Samira Rebello)'
     });
 
     showFeedback(`Membresias atualizadas com sucesso!`);

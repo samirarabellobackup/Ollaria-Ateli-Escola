@@ -59,7 +59,7 @@ const StudioAppContent: React.FC = () => {
               Ollaria Ateliê • Cerâmica & Pesquisa
             </p>
             <p className="text-[11px]">
-              Coordenação: Sah Pereira • Brasília, Distrito Federal
+              Coordenação: Samira Rebello • Brasília, Distrito Federal
             </p>
           </div>
 

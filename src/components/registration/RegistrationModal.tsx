@@ -852,7 +852,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
                             onChange={() => handleChange('autorizacaoImagem', 'autorizo')}
                             className="text-[#D97736] focus:ring-[#D97736]"
                           />
-                          <span>Autorizo o uso de fotografias e vídeos realizados durante a atividade para divulgação do Ateliê Sah Pereira | Ollaria Cerâmica.</span>
+                          <span>Autorizo o uso de fotografias e vídeos realizados durante a atividade para divulgação do Ateliê Samira Rebello | Ollaria Cerâmica.</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-xs">
                           <input

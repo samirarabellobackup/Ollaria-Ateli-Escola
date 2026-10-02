@@ -36,6 +36,7 @@ import { AddStudentModal } from './AddStudentModal';
 import { ImportStudentsModal } from './ImportStudentsModal';
 import { PieceStage, AttendanceStatus, PaymentCategory, PaymentMethod, ClassShift, Student, MEMBERSHIP_DEFINITIONS, MembershipType } from '../../types';
 import { MemberUnifiedModal } from './MemberUnifiedModal';
+import { ClassAttendanceManager } from './attendance/ClassAttendanceManager';
 
 interface AdminDashboardProps {
   onOpenRegistration: () => void;
@@ -136,7 +137,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
   const studentsToRenew = students.filter((s) => s.aulasRestantes <= 2 && s.status === 'ativo');
 
   const copyStudentAccessText = (student: typeof students[0]) => {
-    const text = `*OLLARIA ATELIÊ - ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de matrícula para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• Senha/PIN de Acesso: *${student.pin}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Sah Pereira | Ollaria Cerâmica - Brasília DF_`;
+    const text = `*OLLARIA ATELIÊ - ACESSO AO SEU PORTAL*\n\nOlá, ${student.registrationData.nomePreferencia || student.nome}!\n\nSegue seu link e código de matrícula para acompanhar suas aulas, peças no forno e financeiro:\n\n• Código do Aluno: *${student.accessCode}*\n• Senha/PIN de Acesso: *${student.pin}*\n• Turma: ${student.turma}\n\nChave PIX do ateliê para compras e mensalidade: *61 996101254*\n\n_Ateliê Samira Rebello | Ollaria Cerâmica - Brasília DF_`;
     navigator.clipboard.writeText(text);
     setCopiedKeyId(student.id);
     setTimeout(() => setCopiedKeyId(null), 2000);
@@ -220,7 +221,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
             <span className="bg-[#2C241E] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
               Painel de Controle Ateliê
             </span>
-            <span className="text-xs text-[#7A6A5E] font-medium">Sah Pereira</span>
+            <span className="text-xs text-[#7A6A5E] font-medium">Samira Rebello</span>
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#2C241E] mt-1">
             Gestão Integrada Ollaria Cerâmica
@@ -263,7 +264,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
         {[
           { id: 'overview', label: 'Visão Geral', icon: TrendingUp },
           { id: 'students', label: 'Membr@s Ollaria & Serviços', icon: Users, badge: students.length },
-          { id: 'attendance', label: 'Presença & Aulas', icon: Calendar },
+          { id: 'attendance', label: 'Chamada & Registro de Aulas', icon: Calendar },
           { id: 'pieces', label: 'Peças & Fornos', icon: Flame, badge: piecesInKiln },
           { id: 'finance', label: 'Financeiro & Vendas', icon: CreditCard, badge: totalPendingFinance > 0 ? `R$ ${totalPendingFinance.toFixed(0)}` : undefined },
           { id: 'reminders', label: 'Notificações & Lembretes', icon: Bell, badge: studentsToRenew.length || undefined },
@@ -767,138 +768,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onOpenRegistrati
         </div>
       )}
 
-      {/* 3. TAB: PRESENÇA & AULAS */}
+      {/* 3. TAB: CHAMADA & REGISTRO DE AULAS */}
       {activeAdminTab === 'attendance' && (
-        <div className="space-y-6">
-          
-          {/* Quick Roll-Call Bar */}
-          <div className="bg-white p-5 rounded-2xl border border-[#E6DFD5] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-serif font-bold text-lg text-[#2C241E]">
-                Chamada & Registro de Aulas
-              </h3>
-              <p className="text-xs text-[#7A6A5E]">
-                Marque presenças, faltas e reposições das alunas(os) em tempo real
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <input
-                type="date"
-                value={attendanceDate}
-                onChange={(e) => setAttendanceDate(e.target.value)}
-                className="px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-xs font-semibold text-[#2C241E]"
-              />
-
-              <select
-                value={attendanceShift}
-                onChange={(e) => setAttendanceShift(e.target.value as ClassShift)}
-                className="px-3 py-2 rounded-xl border border-[#D5CBC0] bg-[#FAF8F5] text-xs font-semibold text-[#2C241E]"
-              >
-                <option value="quarta-tarde">Quarta Tarde (15h20 às 17h50)</option>
-                <option value="quarta-noite">Quarta Noite (18h20 às 20h50)</option>
-                <option value="sabado-manha">Sábado Manhã (09h30 às 12h00)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Students in chosen shift for roll-call */}
-          <div className="bg-white rounded-2xl border border-[#E6DFD5] p-6 shadow-xs space-y-4">
-            <h4 className="font-serif font-bold text-base text-[#2C241E] border-b border-[#EBE4DA] pb-2">
-              Alunos Matriculados na Turma: {attendanceShift}
-            </h4>
-
-            <div className="divide-y divide-[#EBE4DA]">
-              {students
-                .filter((s) => s.turma === attendanceShift)
-                .map((st) => (
-                  <div key={st.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <strong className="text-[#2C241E] block font-serif text-base">{st.nome}</strong>
-                      <span className="text-xs text-[#7A6A5E]">
-                        Plano {st.modalidade} • <strong>{st.aulasFeitas} de {st.aulasTotaisPlano} feitas</strong> ({st.aulasRestantes} restantes)
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleQuickAttendance(st.id, 'presente')}
-                        className="px-3 py-1.5 rounded-xl bg-green-100 hover:bg-green-200 text-green-900 font-bold text-xs flex items-center gap-1 transition-colors"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-700" />
-                        Presente (+1 aula)
-                      </button>
-
-                      <button
-                        onClick={() => handleQuickAttendance(st.id, 'falta')}
-                        className="px-3 py-1.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-900 font-bold text-xs transition-colors"
-                      >
-                        Falta
-                      </button>
-
-                      <button
-                        onClick={() => handleQuickAttendance(st.id, 'reposicao')}
-                        className="px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs transition-colors"
-                      >
-                        Reposição
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Recent Attendance Log */}
-          <div className="bg-white rounded-2xl border border-[#E6DFD5] p-6 shadow-xs space-y-4">
-            <h4 className="font-serif font-bold text-base text-[#2C241E]">
-              Histórico Recente de Presenças
-            </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#FAF8F5] text-[#7A6A5E] uppercase text-[11px] font-semibold border-b border-[#E6DFD5]">
-                  <tr>
-                    <th className="p-3">Data</th>
-                    <th className="p-3">Aluno</th>
-                    <th className="p-3">Horário</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Observação</th>
-                    <th className="p-3 text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EBE4DA]">
-                  {attendance.slice(0, 10).map((a) => {
-                    const st = students.find((s) => s.id === a.studentId);
-                    return (
-                      <tr key={a.id}>
-                        <td className="p-3 text-[#2C241E] font-medium">{new Date(a.data).toLocaleDateString('pt-BR')}</td>
-                        <td className="p-3 font-semibold text-[#2C241E]">{st ? st.nome : 'Aluno'}</td>
-                        <td className="p-3 text-[#7A6A5E]">{a.horario}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            a.status === 'presente' ? 'bg-green-100 text-green-800' : a.status === 'falta' ? 'bg-red-100 text-red-800' : 'bg-purple-100 text-purple-800'
-                          }`}>
-                            {a.status}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[#4A3E35]">{a.observacao || '-'}</td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => deleteAttendance(a.id)}
-                            className="text-red-500 hover:text-red-700 p-1"
-                            title="Excluir registro"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
+        <ClassAttendanceManager />
       )}
 
       {/* 4. TAB: PEÇAS & FORNOS */}
